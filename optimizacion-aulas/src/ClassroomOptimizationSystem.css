@@ -1,0 +1,258 @@
+.classroom-optimization-container {
+  /* Equivalent to min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 */
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, #eff6ff, #e0e7ff);
+  padding: 1.5rem;
+}
+
+.max-w-7xl {
+  /* Equivalent to max-w-7xl */
+  max-width: 80rem; /* 1280px */
+}
+
+.mx-auto {
+  /* Equivalent to mx-auto */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.header-section {
+  /* Equivalent to text-center mb-8 */
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.header-title {
+  /* Equivalent to text-4xl font-bold text-gray-800 */
+  font-size: 2.25rem; /* 36px */
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.header-icon {
+  /* Equivalent to w-12 h-12 text-blue-600 mr-3 */
+  width: 3rem; /* 48px */
+  height: 3rem; /* 48px */
+  color: #2563eb;
+  margin-right: 0.75rem;
+}
+
+.header-description {
+  /* Equivalent to text-gray-600 text-lg */
+  color: #4a5568;
+  font-size: 1.125rem; /* 18px */
+}
+
+.config-panel {
+  /* Equivalent to bg-white rounded-xl shadow-lg p-6 mb-6 */
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.grid-cols-2-gap-6 {
+  /* Equivalent to grid md:grid-cols-2 gap-6 */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Adjust as needed */
+  gap: 1.5rem;
+}
+
+.input-field {
+  /* Equivalent to w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent */
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  outline: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.input-field:focus {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  border-color: transparent;
+}
+
+.action-button {
+  /* Equivalent to mt-6 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center */
+  margin-top: 1.5rem;
+  width: 100%;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-button:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.action-button:disabled {
+  background-color: #60a5fa;
+  cursor: not-allowed;
+}
+
+.spinner {
+  /* Equivalent to animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2 */
+  animation: spin 1s linear infinite;
+  border-radius: 9999px;
+  height: 1.25rem;
+  width: 1.25rem;
+  border-bottom-width: 2px;
+  border-color: #ffffff;
+  margin-right: 0.5rem;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.data-grid {
+  /* Equivalent to grid lg:grid-cols-3 gap-6 mb-6 */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Adjust for responsiveness */
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.data-card {
+  /* Equivalent to bg-white rounded-xl shadow-lg p-6 */
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+}
+
+.tag-green {
+  /* Equivalent to inline-block bg-green-100 text-green-800 px-2 py-1 rounded mr-1 mb-1 */
+  display: inline-block;
+  background-color: #d1fae5;
+  color: #065f46;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  margin-right: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.card-footer {
+  /* Equivalent to mt-4 pt-4 border-t */
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.results-section {
+  /* Equivalent to space-y-6 */
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.metrics-panel {
+  /* Equivalent to bg-white rounded-xl shadow-lg p-6 */
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+}
+
+.metrics-grid {
+  /* Equivalent to grid md:grid-cols-4 gap-4 */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Adjust for responsiveness */
+  gap: 1rem;
+}
+
+.metric-card {
+  /* Equivalent to bg-blue-50 rounded-lg p-4 text-center */
+  background-color: #eff6ff;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+.assignments-table-panel {
+  /* Equivalent to bg-white rounded-xl shadow-lg p-6 */
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+}
+
+.assignments-table {
+  /* Equivalent to w-full text-sm */
+  width: 100%;
+  font-size: 0.875rem; /* 14px */
+  border-collapse: collapse;
+}
+
+.assignments-table th,
+.assignments-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.assignments-table thead tr {
+  background-color: #f9fafb;
+}
+
+.assignments-table tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.assignments-table tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.tag-utilization,
+.tag-penalization {
+  /* Common styles for both tags */
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem; /* 12px */
+  font-weight: 500;
+  display: inline-block;
+}
+
+/* Specific styles for utilization tags */
+.tag-utilization.bg-green-100 {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.tag-utilization.bg-yellow-100 {
+  background-color: #fefce8;
+  color: #b45309;
+}
+
+.tag-utilization.bg-red-100 {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Specific styles for penalization tags */
+.tag-penalization.bg-green-100 {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.tag-penalization.bg-red-100 {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.warning-message {
+  /* Equivalent to mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg */
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 0.5rem;
+}
