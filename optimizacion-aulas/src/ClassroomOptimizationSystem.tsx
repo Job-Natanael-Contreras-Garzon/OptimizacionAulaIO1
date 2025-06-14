@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Calculator, Building, Clock, Users, Settings, Play, CheckCircle } from 'lucide-react';
-import './ClassroomOptimizationSystem.css';
+import GLPK from 'glpk.js';
+import { Calculator, Building, Clock, Users, Settings, Play, CheckCircle, PlusCircle, X } from 'lucide-react';
+import './Modern.css';
 
 // Tipos de datos
 interface Aula {
@@ -42,7 +43,7 @@ interface ResultadoOptimizacion {
 
 const ClassroomOptimizationSystem: React.FC = () => {
   // Estado de los datos del problema
-  const [aulas] = useState<Aula[]>([
+  const [aulas, setAulas] = useState<Aula[]>([ 
     // Primer piso
     { id: 1, piso: 1, capacidad: 45, nombre: "Aula 1-1" },
     { id: 2, piso: 1, capacidad: 45, nombre: "Aula 1-2" },
@@ -80,7 +81,7 @@ const ClassroomOptimizationSystem: React.FC = () => {
     { id: 30, piso: 5, capacidad: 120, nombre: "Aula 5-2" }
   ]);
 
-  const [grupos] = useState<Grupo[]>([
+  const [grupos, setGrupos] = useState<Grupo[]>([ 
     { id: 1, nombre: "Grupo 1", materia: "Cálculo I", estudiantes: 35 },
     { id: 2, nombre: "Grupo 2", materia: "Física I", estudiantes: 50 },
     { id: 3, nombre: "Grupo 3", materia: "Introducción a la Ingeniería", estudiantes: 120 },
@@ -88,7 +89,7 @@ const ClassroomOptimizationSystem: React.FC = () => {
     { id: 5, nombre: "Grupo 5", materia: "Álgebra Lineal", estudiantes: 60 }
   ]);
 
-  const [horarios] = useState<Horario[]>([
+  const [horarios, setHorarios] = useState<Horario[]>([ 
     { id: 1, nombre: "Bloque 1", inicio: "07:00", fin: "09:15" },
     { id: 2, nombre: "Bloque 2", inicio: "09:15", fin: "11:30" },
     { id: 3, nombre: "Bloque 3", inicio: "11:30", fin: "13:45" },
@@ -105,79 +106,219 @@ const ClassroomOptimizationSystem: React.FC = () => {
   const [resultado, setResultado] = useState<ResultadoOptimizacion | null>(null);
   const [optimizando, setOptimizando] = useState<boolean>(false);
 
-  // Algoritmo de optimización (heurístico greedy mejorado)
+  // Estado para los diálogos
+  const [dialogOpen, setDialogOpen] = useState<'aula' | 'grupo' | 'horario' | null>(null);
+  const [newAula, setNewAula] = useState({ nombre: '', piso: 1, capacidad: 40 });
+  const [newGrupo, setNewGrupo] = useState({ nombre: '', materia: '', estudiantes: 30 });
+  const [newHorario, setNewHorario] = useState({ nombre: 'Bloque 7', inicio: '07:00', fin: '09:15' });
+
+  const handleOpenDialog = (tipo: 'aula' | 'grupo' | 'horario') => {
+    setDialogOpen(tipo);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(null);
+    // Resetear formularios
+    setNewAula({ nombre: '', piso: 1, capacidad: 40 });
+    setNewGrupo({ nombre: '', materia: '', estudiantes: 30 });
+    setNewHorario({ nombre: `Bloque ${horarios.length + 1}`, inicio: '07:00', fin: '09:15' });
+  };
+
+  const handleAddAula = () => {
+    if (!newAula.nombre || !newAula.piso || !newAula.capacidad) {
+      alert('Por favor, complete todos los campos.');
+      return;
+    }
+    const aulaToAdd: Aula = {
+      ...newAula,
+      id: Date.now(), // ID único simple
+    };
+    setAulas(prev => [...prev, aulaToAdd]);
+    handleCloseDialog();
+  };
+  
+  const handleAddGrupo = () => {
+    if (!newGrupo.nombre || !newGrupo.materia || !newGrupo.estudiantes) {
+      alert('Por favor, complete todos los campos.');
+      return;
+    }
+    const grupoToAdd: Grupo = {
+      ...newGrupo,
+      id: Date.now(),
+    };
+    setGrupos(prev => [...prev, grupoToAdd]);
+    handleCloseDialog();
+  };
+
+  const handleAddHorario = () => {
+    if (!newHorario.nombre || !newHorario.inicio || !newHorario.fin) {
+      alert('Por favor, complete todos los campos.');
+      return;
+    }
+    const horarioToAdd: Horario = {
+      ...newHorario,
+      id: Date.now(),
+    };
+    setHorarios(prev => [...prev, horarioToAdd]);
+    handleCloseDialog();
+  };
+
+  // Algoritmo de optimización (usando glpk.js)
   const optimizarAsignaciones = async (): Promise<void> => {
     setOptimizando(true);
-    
-    // Simular procesamiento
-    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const asignaciones: Asignacion[] = [];
-    const aulasOcupadas = new Set<string>(); // "aulaId-horarioId"
-    
-    // Ordenar grupos por número de estudiantes (descendente)
-    const gruposOrdenados = [...grupos].sort((a, b) => b.estudiantes - a.estudiantes);
-    
-    for (const grupo of gruposOrdenados) {
-      let mejorAsignacion: Asignacion | null = null;
-      let mejorPuntuacion = -Infinity;
+    const glpk = await GLPK();
 
-      // Evaluar todas las combinaciones aula-horario disponibles
+
+    const lp: any = {
+      name: 'ClassroomOptimization',
+      objective: {
+        direction: glpk.GLP_MAX,
+        name: 'obj',
+        vars: []
+      },
+      subjectTo: [],
+      binaries: []
+    };
+
+    const x_vars: { [key: string]: { grupo: Grupo, aula: Aula, horario: Horario } } = {};
+
+    // Create variables and add to objective
+    for (const grupo of grupos) {
       for (const aula of aulas) {
-        if (aula.capacidad < grupo.estudiantes) continue;
+        // Constraint C: Only create x_ijt if capacity is sufficient
+        if (aula.capacidad < grupo.estudiantes) {
+          continue;
+        }
 
         for (const horario of horarios) {
-          const claveOcupacion = `${aula.id}-${horario.id}`;
-          if (aulasOcupadas.has(claveOcupacion)) continue;
+          const x_var_name = `x_${grupo.id}_${aula.id}_${horario.id}`;
+          lp.binaries.push(x_var_name);
+          lp.objective.vars.push({ name: x_var_name, coef: grupo.estudiantes });
+          x_vars[x_var_name] = { grupo, aula, horario };
 
-          // Calcular métricas de la asignación
-          const utilizacion = (grupo.estudiantes / aula.capacidad) * 100;
-          const espacioVacio = aula.capacidad - grupo.estudiantes;
-          const umbralTolerancia = (umbralDelta / 100) * aula.capacidad;
-          
-          let penalizacion = 0;
-          if (espacioVacio > umbralTolerancia) {
-            penalizacion = (espacioVacio - umbralTolerancia) * factorPenalizacion;
-          }
+          const u_var_name = `u_${grupo.id}_${aula.id}_${horario.id}`;
+          // U_ijt are continuous by default, no need to add to binaries/generals
+          lp.objective.vars.push({ name: u_var_name, coef: -factorPenalizacion });
+        }
+      }
+    }
 
-          // Puntuación: maximizar utilización, minimizar penalización
-          const puntuacion = grupo.estudiantes - penalizacion;
+    // Constraint A: Unique assignment per group (ΣΣ x_ijt = 1 ∀i)
+    for (const grupo of grupos) {
+      const constraint_vars = [];
+      for (const aula of aulas) {
+        if (aula.capacidad < grupo.estudiantes) continue;
+        for (const horario of horarios) {
+          constraint_vars.push({ name: `x_${grupo.id}_${aula.id}_${horario.id}`, coef: 1.0 });
+        }
+      }
+      if (constraint_vars.length > 0) { // Only add constraint if there are possible assignments
+        lp.subjectTo.push({
+          name: `cons_group_${grupo.id}`,
+          vars: constraint_vars,
+          bnds: { type: glpk.GLP_FX, lb: 1.0, ub: 1.0 } // Fixed to 1
+        });
+      }
+    }
 
-          if (puntuacion > mejorPuntuacion) {
-            mejorPuntuacion = puntuacion;
-            mejorAsignacion = {
+    // Constraint B: One assignment per classroom-timeslot (Σ x_ijt ≤ 1 ∀j,t)
+    for (const aula of aulas) {
+      for (const horario of horarios) {
+        const constraint_vars = [];
+        for (const grupo of grupos) {
+          if (aula.capacidad < grupo.estudiantes) continue;
+          constraint_vars.push({ name: `x_${grupo.id}_${aula.id}_${horario.id}`, coef: 1.0 });
+        }
+        if (constraint_vars.length > 0) { // Only add constraint if there are possible assignments
+          lp.subjectTo.push({
+            name: `cons_aula_horario_${aula.id}_${horario.id}`,
+            vars: constraint_vars,
+            bnds: { type: glpk.GLP_UP, ub: 1.0 } // Upper bound 1
+          });
+        }
+      }
+    }
+
+    // Constraint D: Underutilization penalty (U_ijt ≥ x_ijt × (C_j - S_i - δ))
+    // U_ijt - x_ijt * (C_j - S_i - δ) >= 0
+    for (const grupo of grupos) {
+      for (const aula of aulas) {
+        if (aula.capacidad < grupo.estudiantes) continue;
+        for (const horario of horarios) {
+          const x_var_name = `x_${grupo.id}_${aula.id}_${horario.id}`;
+          const u_var_name = `u_${grupo.id}_${aula.id}_${horario.id}`;
+          const umbralToleranciaValor = (umbralDelta / 100) * aula.capacidad;
+          const coef_x = -(aula.capacidad - grupo.estudiantes - umbralToleranciaValor);
+
+          lp.subjectTo.push({
+            name: `cons_underutil_${grupo.id}_${aula.id}_${horario.id}`,
+            vars: [
+              { name: u_var_name, coef: 1.0 },
+              { name: x_var_name, coef: coef_x }
+            ],
+            bnds: { type: glpk.GLP_LO, lb: 0.0 } // Lower bound 0
+          });
+        }
+      }
+    }
+
+    let solvedAssignments: Asignacion[] = [];
+    let totalObjectiveValue = 0;
+    let totalStudentsAssigned = 0;
+    let totalPenalization = 0;
+    let totalUtilization = 0;
+    let assignedCount = 0;
+
+    try {
+      const res = await glpk.solve(lp, { msglev: glpk.GLP_MSG_OFF, presol: true });
+
+      if (res && res.result && (res.result.status === glpk.GLP_OPT || res.result.status === glpk.GLP_FEAS)) {
+        totalObjectiveValue = res.result.z;
+        for (const varName in res.result.vars) {
+          if (varName.startsWith('x_') && res.result.vars[varName] > 0.99) { // Check for binary variable close to 1
+            const { grupo, aula, horario } = x_vars[varName];
+            const utilizacion = (grupo.estudiantes / aula.capacidad) * 100;
+
+            // Recalculate penalization based on the optimal assignment
+            const espacioVacio = aula.capacidad - grupo.estudiantes;
+            const umbralToleranciaValor = (umbralDelta / 100) * aula.capacidad;
+            let penalizacion = 0;
+            if (espacioVacio > umbralToleranciaValor) {
+              penalizacion = (espacioVacio - umbralToleranciaValor) * factorPenalizacion;
+            }
+            
+            solvedAssignments.push({
               grupoId: grupo.id,
               aulaId: aula.id,
               horarioId: horario.id,
               utilizacion: utilizacion,
               penalizacion: penalizacion
-            };
+            });
+            totalStudentsAssigned += grupo.estudiantes;
+            totalPenalization += penalizacion;
+            totalUtilization += utilizacion;
+            assignedCount++;
           }
         }
+      } else if (res && res.result) {
+        console.error("GLPK Solver did not find an optimal or feasible solution. Status:", res.result.status);
+        alert("Error de optimización: No se pudo encontrar una solución óptima o factible. Intente ajustar los parámetros o los datos.");
+      } else {
+        console.error("GLPK Solver returned an undefined or invalid result.");
+        alert("Error de procesamiento: Ocurrió un error inesperado al procesar el resultado del solver. Intente ajustar los parámetros o los datos.");
       }
-
-      if (mejorAsignacion) {
-        asignaciones.push(mejorAsignacion);
-        aulasOcupadas.add(`${mejorAsignacion.aulaId}-${mejorAsignacion.horarioId}`);
-      }
+    } catch (error) {
+      console.error("Error during GLPK solve:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      alert("Error de ejecución: Ocurrió un error al ejecutar el solver de optimización.");
     }
 
-    // Calcular métricas del resultado
-    const estudiantesAsignados = asignaciones.reduce((total, asig) => {
-      const grupo = grupos.find(g => g.id === asig.grupoId);
-      return total + (grupo?.estudiantes || 0);
-    }, 0);
-
-    const penalizacionTotal = asignaciones.reduce((total, asig) => total + asig.penalizacion, 0);
-    const objetivoTotal = estudiantesAsignados - penalizacionTotal;
-    const utilizacionPromedio = asignaciones.reduce((total, asig) => total + asig.utilizacion, 0) / asignaciones.length;
-
     setResultado({
-      asignaciones,
-      objetivoTotal,
-      estudiantesAsignados,
-      penalizacionTotal,
-      utilizacionPromedio
+      asignaciones: solvedAssignments,
+      objetivoTotal: totalObjectiveValue,
+      estudiantesAsignados: totalStudentsAssigned,
+      penalizacionTotal: totalPenalization,
+      utilizacionPromedio: assignedCount > 0 ? totalUtilization / assignedCount : 0
     });
 
     setOptimizando(false);
@@ -197,62 +338,54 @@ const ClassroomOptimizationSystem: React.FC = () => {
   };
 
   return (
-    <div className="classroom-optimization-container">
-      <div className="max-w-7xl mx-auto">
+    <div className="modern-container">
+            <div>
         {/* Header */}
-        <div className="header-section text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <Building className="header-icon w-12 h-12 text-blue-600 mr-3" />
-            <h1 className="header-title text-4xl font-bold text-gray-800">
-              Sistema de Optimización de Aulas
-            </h1>
-          </div>
-          <p className="header-description text-gray-600 text-lg">
-            Universidad Autónoma Gabriel René Moreno (UAGRM) - Ingeniería Informática
-          </p>
-          <div className="text-sm text-gray-500 mt-2">
-            Modelo MILP para asignación eficiente de espacios académicos
-          </div>
+        <div className="modern-header">
+          <Building className="icon" size={48} />
+          <h1>Sistema de Optimización de Aulas</h1>
+          <p>Universidad Autónoma Gabriel René Moreno (UAGRM) - Ingeniería Informática</p>
+          <p className="subtitle">Modelo MILP para asignación eficiente de espacios académicos</p>
         </div>
 
         {/* Panel de configuración */}
-        <div className="config-panel bg-white rounded-xl shadow-lg p-6 mb-6">
-          <div className="flex items-center mb-4">
-            <Settings className="w-6 h-6 text-blue-600 mr-2" />
-            <h2 className="text-2xl font-semibold text-gray-800">Parámetros del Modelo</h2>
+        <div className="modern-card config-panel">
+          <div className="modern-card-header">
+            <Settings className="icon" />
+            <h2>Parámetros del Modelo</h2>
           </div>
           
-          <div className="grid-cols-2-gap-6">
+          <div className="modern-grid modern-grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label>
                 Umbral de Tolerancia (δ) - Porcentaje
               </label>
               <input
                 type="number"
                 value={umbralDelta}
                 onChange={(e) => setUmbralDelta(Number(e.target.value))}
-                className="input-field w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="modern-input"
                 min="0"
                 max="50"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="form-hint">
                 Porcentaje de capacidad permitido sin penalización
               </p>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label>
                 Factor de Penalización (λ)
               </label>
               <input
                 type="number"
                 value={factorPenalizacion}
                 onChange={(e) => setFactorPenalizacion(Number(e.target.value))}
-                className="input-field w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="modern-input"
                 min="1"
                 max="100"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="form-hint">
                 Multiplicador para penalizar subutilización
               </p>
             </div>
@@ -261,16 +394,16 @@ const ClassroomOptimizationSystem: React.FC = () => {
           <button
             onClick={optimizarAsignaciones}
             disabled={optimizando}
-            className="action-button mt-6 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
+            className="modern-button"
           >
             {optimizando ? (
               <>
-                <div className="spinner animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                <div className="spinner"></div>
                 Optimizando...
               </>
             ) : (
               <>
-                <Play className="w-5 h-5 mr-2" />
+                <Play className="icon" />
                 Ejecutar Optimización MILP
               </>
             )}
@@ -278,20 +411,20 @@ const ClassroomOptimizationSystem: React.FC = () => {
         </div>
 
         {/* Datos del problema en grid */}
-        <div className="data-grid grid lg:grid-cols-3 gap-6 mb-6">
+        <div className="modern-grid modern-grid-cols-3">
           {/* Aulas */}
-          <div className="data-card bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center mb-4">
-              <Building className="w-6 h-6 text-green-600 mr-2" />
-              <h3 className="text-xl font-semibold text-gray-800">Aulas Disponibles</h3>
+          <div className="modern-card">
+            <div className="modern-card-header">
+              <Building className="icon icon-green" />
+              <h3>Aulas Disponibles</h3>
             </div>
-            <div className="space-y-2 max-h-80 overflow-y-auto">
+            <div className="scrollable">
               {Array.from({length: 5}, (_, piso) => piso + 1).map(pisoNum => (
-                <div key={pisoNum} className="border-l-4 border-green-500 pl-3 py-2">
-                  <h4 className="font-medium text-gray-700">Piso {pisoNum}</h4>
-                  <div className="text-sm text-gray-600">
+                <div key={pisoNum} className="list-item-group">
+                  <h4>Piso {pisoNum}</h4>
+                  <div className="tag-container">
                     {aulas.filter(a => a.piso === pisoNum).map(aula => (
-                      <span key={aula.id} className="tag-green">
+                      <span key={aula.id} className="tag tag-green">
                         {aula.nombre} ({aula.capacidad})
                       </span>
                     ))}
@@ -299,107 +432,176 @@ const ClassroomOptimizationSystem: React.FC = () => {
                 </div>
               ))}
             </div>
-            <div className="card-footer mt-4 pt-4 border-t">
-              <p className="text-sm text-gray-600">
+            <div className="modern-card-footer">
+              <p>
                 <strong>Total:</strong> {aulas.length} aulas
               </p>
+              <button onClick={() => handleOpenDialog('aula')} className="modern-button secondary"><PlusCircle size={16} /> Añadir</button>
             </div>
           </div>
 
           {/* Grupos */}
-          <div className="data-card bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center mb-4">
-              <Users className="w-6 h-6 text-purple-600 mr-2" />
-              <h3 className="text-xl font-semibold text-gray-800">Grupos y Materias</h3>
+          {/* Grupos */}
+          <div className="modern-card">
+            <div className="modern-card-header">
+              <Users className="icon icon-purple" />
+              <h3>Grupos y Materias</h3>
             </div>
-            <div className="space-y-3">
+            <div className="modern-grid-cols-1 scrollable">
               {grupos.map(grupo => (
-                <div key={grupo.id} className="border-l-4 border-purple-500 pl-3 py-2">
-                  <div className="font-medium text-gray-800">{grupo.nombre}</div>
-                  <div className="text-sm text-gray-600">{grupo.materia}</div>
-                  <div className="text-sm text-purple-600 font-medium">
-                    {grupo.estudiantes} estudiantes
-                  </div>
+                <div key={grupo.id} className="list-item-group">
+                  <h3>{grupo.nombre}</h3>
+                  <p>{grupo.materia}</p>
+                  <p className="highlight-purple">{grupo.estudiantes} estudiantes</p>
                 </div>
               ))}
             </div>
-            <div className="card-footer mt-4 pt-4 border-t">
-              <p className="text-sm text-gray-600">
+            <div className="modern-card-footer">
+              <p>
                 <strong>Total:</strong> {grupos.reduce((sum, g) => sum + g.estudiantes, 0)} estudiantes
               </p>
+              <button onClick={() => handleOpenDialog('grupo')} className="modern-button secondary"><PlusCircle size={16} /> Añadir</button>
             </div>
           </div>
 
           {/* Horarios */}
-          <div className="data-card bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center mb-4">
-              <Clock className="w-6 h-6 text-orange-600 mr-2" />
-              <h3 className="text-xl font-semibold text-gray-800">Bloques Horarios</h3>
+          <div className="modern-card">
+            <div className="modern-card-header">
+              <Clock className="icon icon-orange" />
+              <h3>Bloques Horarios</h3>
             </div>
-            <div className="space-y-2">
+            <div className="modern-grid-cols-1 scrollable">
               {horarios.map(horario => (
-                <div key={horario.id} className="border-l-4 border-orange-500 pl-3 py-2">
-                  <div className="font-medium text-gray-800">{horario.nombre}</div>
-                  <div className="text-sm text-gray-600">
-                    {horario.inicio} - {horario.fin}
-                  </div>
+                <div key={horario.id} className="list-item-group">
+                  <h3>{horario.nombre}</h3>
+                  <p>{horario.inicio} - {horario.fin}</p>
                 </div>
               ))}
             </div>
-            <div className="card-footer mt-4 pt-4 border-t">
-              <p className="text-sm text-gray-600">
+            <div className="modern-card-footer">
+              <p>
                 <strong>Total:</strong> {horarios.length} bloques diarios
               </p>
+              <button onClick={() => handleOpenDialog('horario')} className="modern-button secondary"><PlusCircle size={16} /> Añadir</button>
             </div>
           </div>
         </div>
 
+        {/* Dialogs */}
+        {dialogOpen && (
+          <div className="modern-dialog-backdrop">
+              <div className="modern-dialog">
+                  <div className="modern-dialog-header">
+                      <h2>Añadir {dialogOpen === 'aula' ? 'Aula' : dialogOpen === 'grupo' ? 'Grupo' : 'Horario'}</h2>
+                      <button onClick={handleCloseDialog} className="modern-button secondary" style={{ padding: '0.5rem' }}><X size={16} /></button>
+                  </div>
+                  <div className="modern-dialog-content">
+                      {dialogOpen === 'aula' && (
+                          <div className="modern-grid">
+                              <div>
+                                  <label>Nombre del Aula</label>
+                                  <input type="text" value={newAula.nombre} onChange={e => setNewAula({...newAula, nombre: e.target.value})} className="modern-input" placeholder="Ej: Aula 5-3" />
+                              </div>
+                              <div>
+                                  <label>Piso</label>
+                                  <input type="number" value={newAula.piso} onChange={e => setNewAula({...newAula, piso: Number(e.target.value)})} className="modern-input" />
+                              </div>
+                              <div>
+                                  <label>Capacidad</label>
+                                  <input type="number" value={newAula.capacidad} onChange={e => setNewAula({...newAula, capacidad: Number(e.target.value)})} className="modern-input" />
+                              </div>
+                          </div>
+                      )}
+                      {dialogOpen === 'grupo' && (
+                          <div className="modern-grid">
+                              <div>
+                                  <label>Nombre del Grupo</label>
+                                  <input type="text" value={newGrupo.nombre} onChange={e => setNewGrupo({...newGrupo, nombre: e.target.value})} className="modern-input" placeholder="Ej: Grupo 6" />
+                              </div>
+                              <div>
+                                  <label>Materia</label>
+                                  <input type="text" value={newGrupo.materia} onChange={e => setNewGrupo({...newGrupo, materia: e.target.value})} className="modern-input" placeholder="Ej: Investigación Operativa II" />
+                              </div>
+                              <div>
+                                  <label>Nro. Estudiantes</label>
+                                  <input type="number" value={newGrupo.estudiantes} onChange={e => setNewGrupo({...newGrupo, estudiantes: Number(e.target.value)})} className="modern-input" />
+                              </div>
+                          </div>
+                      )}
+                      {dialogOpen === 'horario' && (
+                          <div className="modern-grid">
+                              <div>
+                                  <label>Nombre del Bloque</label>
+                                  <input type="text" value={newHorario.nombre} onChange={e => setNewHorario({...newHorario, nombre: e.target.value})} className="modern-input" />
+                              </div>
+                              <div>
+                                  <label>Hora de Inicio</label>
+                                  <input type="time" value={newHorario.inicio} onChange={e => setNewHorario({...newHorario, inicio: e.target.value})} className="modern-input" />
+                              </div>
+                              <div>
+                                  <label>Hora de Fin</label>
+                                  <input type="time" value={newHorario.fin} onChange={e => setNewHorario({...newHorario, fin: e.target.value})} className="modern-input" />
+                              </div>
+                          </div>
+                      )}
+                  </div>
+                  <div className="modern-dialog-footer">
+                      <button onClick={handleCloseDialog} className="modern-button secondary">Cancelar</button>
+                      <button onClick={dialogOpen === 'aula' ? handleAddAula : dialogOpen === 'grupo' ? handleAddGrupo : handleAddHorario} className="modern-button">Guardar</button>
+                  </div>
+              </div>
+          </div>
+        )}
+
         {/* Resultados */}
         {resultado && (
-          <div className="results-section space-y-6">
+          <div className="modern-card">
             {/* Métricas generales */}
-            <div className="metrics-panel bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center mb-4">
-                <Calculator className="w-6 h-6 text-blue-600 mr-2" />
-                <h3 className="text-2xl font-semibold text-gray-800">Resultados de la Optimización</h3>
+            <div className="modern-card">
+              <div className="modern-card-header">
+                <Calculator size={24} className="icon" />
+                <h2>Resultados de la Optimización</h2>
               </div>
-              
-              <div className="metrics-grid grid md:grid-cols-4 gap-4">
-                <div className="metric-card bg-blue-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-blue-600">{resultado.objetivoTotal.toFixed(1)}</div>
-                  <div className="text-sm text-gray-600">Función Objetivo</div>
+
+              <div className="metrics-grid">
+                <div className="metric-card bg-blue">
+                  <div className="metric-value">{resultado.objetivoTotal.toFixed(1)}</div>
+                  <div className="metric-label">Función Objetivo</div>
                 </div>
-                <div className="metric-card bg-green-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">{resultado.estudiantesAsignados}</div>
-                  <div className="text-sm text-gray-600">Estudiantes Asignados</div>
+                <div className="metric-card bg-green">
+                  <div className="metric-value">{resultado.estudiantesAsignados}</div>
+                  <div className="metric-label">Estudiantes Asignados</div>
                 </div>
-                <div className="metric-card bg-red-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-red-600">{resultado.penalizacionTotal.toFixed(1)}</div>
-                  <div className="text-sm text-gray-600">Penalización Total</div>
+                <div className="metric-card bg-red">
+                  <div className="metric-value">{resultado.penalizacionTotal.toFixed(1)}</div>
+                  <div className="metric-label">Penalización Total</div>
                 </div>
-                <div className="metric-card bg-purple-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-purple-600">{resultado.utilizacionPromedio.toFixed(1)}%</div>
-                  <div className="text-sm text-gray-600">Utilización Promedio</div>
+                <div className="metric-card bg-purple">
+                  <div className="metric-value">{resultado.utilizacionPromedio.toFixed(1)}%</div>
+                  <div className="metric-label">Utilización Promedio</div>
                 </div>
               </div>
             </div>
 
             {/* Tabla de asignaciones */}
-            <div className="assignments-table-panel bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">Matriz de Asignaciones</h3>
+            <div className="modern-card">
+              <div className="modern-card-header">
+                <Calculator size={24} className="icon" />
+                <h2>Matriz de Asignaciones</h2>
+              </div>
               
-              <div className="overflow-x-auto">
-                <table className="assignments-table w-full text-sm">
+              <div className="scrollable">
+                <table className="modern-table">
                   <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-4 py-3 text-left font-medium text-gray-700">Grupo</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-700">Materia</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-700">Estudiantes</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-700">Aula</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-700">Horario</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-700">Utilización</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-700">Penalización</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-700">Estado</th>
+                    <tr>
+                      <th>Grupo</th>
+                      <th>Materia</th>
+                      <th>Estudiantes</th>
+                      <th>Aula</th>
+                      <th>Horario</th>
+                      <th>Utilización</th>
+                      <th>Penalización</th>
+                      <th>Estado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -408,29 +610,29 @@ const ClassroomOptimizationSystem: React.FC = () => {
                       const aula = aulas.find(a => a.id === asig.aulaId);
                       
                       return (
-                        <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                          <td className="px-4 py-3 font-medium text-gray-900">{grupo?.nombre}</td>
-                          <td className="px-4 py-3 text-gray-700">{grupo?.materia}</td>
-                          <td className="px-4 py-3 text-center font-medium">{grupo?.estudiantes}</td>
-                          <td className="px-4 py-3 text-gray-700">
+                        <tr key={index}>
+                          <td>{grupo?.nombre}</td>
+                          <td>{grupo?.materia}</td>
+                          <td className="text-center">{grupo?.estudiantes}</td>
+                          <td>
                             {getAulaNombre(asig.aulaId)}
-                            <span className="text-xs text-gray-500 block">
+                            <span className="subtitle">
                               Cap: {aula?.capacidad}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-gray-700">{getHorarioNombre(asig.horarioId)}</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`tag-utilization ${asig.utilizacion >= 80 ? 'bg-green-100 text-green-800' : asig.utilizacion >= 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                          <td>{getHorarioNombre(asig.horarioId)}</td>
+                          <td className="text-center">
+                            <span className={`tag ${asig.utilizacion >= 80 ? 'tag-green' : asig.utilizacion >= 60 ? 'tag-yellow' : 'tag-red'}`}>
                               {asig.utilizacion.toFixed(1)}%
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`tag-penalization ${asig.penalizacion === 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                          <td className="text-center">
+                            <span className={`tag ${asig.penalizacion === 0 ? 'tag-green' : 'tag-red'}`}>
                               {asig.penalizacion.toFixed(1)}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
-                            <CheckCircle className="w-5 h-5 text-green-600 mx-auto" />
+                          <td className="text-center">
+                            <CheckCircle className="icon icon-green" />
                           </td>
                         </tr>
                       );
@@ -440,8 +642,8 @@ const ClassroomOptimizationSystem: React.FC = () => {
               </div>
 
               {resultado.asignaciones.length < grupos.length && (
-                <div className="warning-message mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-yellow-800 text-sm">
+                <div className="warning-box">
+                  <p>
                     <strong>Advertencia:</strong> No todos los grupos pudieron ser asignados. 
                     Considera ajustar los parámetros o revisar la disponibilidad de aulas.
                   </p>
