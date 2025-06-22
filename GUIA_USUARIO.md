@@ -2,7 +2,20 @@
 
 ## 🎯 **Introducción**
 
-Esta guía te ayudará a utilizar el Sistema de Optimización de Asignación de Aulas basado en Programación Lineal Entera Mixta (MILP). El sistema está diseñado para resolver automáticamente el problema de asignación de 5 grupos universitarios a 16 aulas distribuidas en 5 pisos, considerando 6 bloques horarios diarios.
+Esta guía te ayudará a utilizar el Sistema de Optimización de Asignación de Aulas basado en Programación Lineal Entera Mixta (MILP). 
+
+**🔑 Características Principales:**
+- **Inicio vacío**: El sistema inicia sin datos precargados (0 aulas, 0 estudiantes, 0 bloques)
+- **Carga rápida**: Dataset universitario completo disponible con un clic
+- **Optimización MILP**: Resuelve automáticamente asignaciones de 5 grupos a 16 aulas en 6 horarios
+- **Parámetros editables**: Control total sobre umbral (δ) y penalización (λ)
+- **Resultados visuales**: Matriz de asignación y métricas de utilización
+
+**📋 Datos del Proyecto:**
+- 5 grupos universitarios (305 estudiantes total)
+- 16 aulas distribuidas en 5 pisos
+- 6 bloques horarios diarios (07:00-20:45)
+- Optimización con restricciones de capacidad y penalización por subutilización
 
 ---
 
@@ -58,69 +71,199 @@ graph TB
 ### Paso 1: Acceso al Sistema
 1. Abre tu navegador web
 2. Navega a la URL del sistema
-3. La interfaz principal se carga automáticamente con los datos predefinidos
+3. **El sistema inicia completamente vacío** - sin datos precargados
 
-### Paso 2: Verificación de Datos
-Los datos están precargados según las especificaciones universitarias:
+### Paso 2: Opciones de Entrada de Datos
+**IMPORTANTE**: Como se ve en las capturas, el sistema inicia completamente vacío. Tienes dos opciones para comenzar:
 
 ```mermaid
-flowchart LR
-    subgraph "📚 Datos Precargados"
-        A[5 Grupos<br/>G1: Cálculo I - 35<br/>G2: Física I - 50<br/>G3: Intro Ing - 120<br/>G4: Redes I - 40<br/>G5: Álgebra - 60]
-        
-        B[16 Aulas<br/>Pisos 1-2: 8 aulas<br/>Pisos 3-4: 6 aulas<br/>Piso 5: 2 aulas]
-        
-        C[6 Horarios<br/>07:00-09:15<br/>09:15-11:30<br/>11:30-13:45<br/>14:00-16:15<br/>16:15-18:30<br/>18:30-20:45]
-    end
+flowchart TD
+    A[🌐 Sistema Iniciado] --> B{� ¿Cómo cargar datos?}
     
-    A --> D[Sistema Listo]
-    B --> D
-    C --> D
+    B -->|Opción 1| C[📁 Cargar Dataset<br/>Datos predefinidos<br/>del proyecto universitario]
+    B -->|Opción 2| D[✏️ Crear Datos Nuevos<br/>Empezar desde cero<br/>con datos personalizados]
     
-    style A fill:#e8f5e8
-    style B fill:#fff3e0
-    style C fill:#e3f2fd
+    C --> E[🎯 Datos Cargados<br/>5 grupos universitarios<br/>16 aulas por pisos<br/>6 bloques horarios]
+    
+    D --> F[➕ Agregar Manualmente<br/>Crear pisos y aulas<br/>Definir grupos<br/>Configurar horarios]
+    
+    E --> G[⚙️ Configurar Parámetros]
+    F --> G
+    
+    G --> H[🚀 Ejecutar Optimización]
+    
+    style A fill:#ff9800
+    style C fill:#4caf50
+    style D fill:#2196f3
+    style H fill:#9c27b0
 ```
 
-### Paso 3: Configurar Parámetros y Ejecutar
-1. Ajusta los parámetros δ (umbral) y λ (penalización)
-2. Haz clic en "Ejecutar Optimización"
-3. Revisa los resultados en la matriz de asignación
+### Paso 3: Flujo Recomendado para Comenzar
+1. **Clic en "Cargar Dataset"** para usar los datos universitarios predefinidos
+2. **Configurar parámetros** δ (umbral: 20%) y λ (penalización: 10)
+3. **Clic en "Ejecutar Optimización"** para ver los resultados
+4. **Revisar la matriz de asignación** que se despliega automáticamente
 
 ---
 
 ## 🎛️ **Interfaz de Usuario Detallada**
 
-### Panel de Gestión de Datos
+### Estado Inicial: Sistema Vacío (Como muestran las capturas)
+
+```mermaid
+graph TB
+    subgraph "🌐 Pantalla Inicial del Sistema"
+        A[⚙️ Parámetros de Optimización<br/>• Umbral Subutilización: 20%<br/>• Factor Penalización: 10<br/>✏️ Editables desde el inicio]
+        
+        B[🔄 Botones de Acción<br/>📁 Cargar Dataset<br/>▶️ Ejecutar Optimización<br/>🗑️ Reiniciar Datos]
+        
+        C[📊 Paneles de Datos Vacíos<br/>🏢 Aulas Disponibles: 0 aulas<br/>� Grupos y Materias: 0 estudiantes<br/>⏰ Bloques Horarios: 0 bloques]
+    end
+      style A fill:#fff3e0
+    style B fill:#e3f2fd
+    style C fill:#ffebee
+    style D fill:#f3e5f5
+```
+
+### Flujo Completo del Usuario (Evidencia de Capturas)
+
+```mermaid
+sequenceDiagram
+    participant U as 👤 Usuario
+    participant S as 🌐 Sistema
+    participant D as 📁 Dataset
+    participant O as 🧠 Optimizador
+    
+    Note over U,O: Inicio: Sistema Completamente Vacío
+    
+    U->>S: Accede al sistema
+    S->>U: Muestra interfaz vacía<br/>0 aulas, 0 estudiantes, 0 bloques
+    
+    Note over U,S: Parámetros δ=20%, λ=10 editables
+    
+    U->>S: Clic "Cargar Dataset"
+    S->>D: Solicita datos universitarios
+    D->>S: Retorna datos completos
+    S->>U: Actualiza interfaz<br/>5 grupos, 16 aulas, 6 bloques
+    
+    Note over U,S: Usuario puede editar parámetros
+    U->>S: Modifica δ o λ (opcional)
+    
+    U->>S: Clic "Ejecutar Optimización"
+    S->>O: Envía datos + parámetros
+    O->>S: Resuelve MILP y retorna matriz
+    S->>U: Muestra matriz de asignación
+    
+    Note over U,O: Resultados visibles en pantalla
+```
+
+### Opciones de Carga de Datos
+
+**📸 IMPORTANTE - Basado en Capturas de Pantalla:**
+> Como se evidencia en las imágenes, el sistema inicia **completamente vacío**. Los paneles muestran claramente:
+> - 🏢 **Aulas Disponibles: 0 aulas**
+> - 👥 **Grupos y Materias: 0 estudiantes** 
+> - ⏰ **Bloques Horarios: 0 bloques**
+> - ⚙️ Solo los **parámetros δ=20% y λ=10** son editables desde el inicio
+
+**1. 📁 Cargar Dataset (Recomendado)**
+- **Función**: Carga instantánea de los datos universitarios completos
+- **Resultado**: Transforma el sistema de 0 elementos a datos completos
+- **Contenido**: 5 grupos con materias específicas (Cálculo I, Física I, etc.)
+- **Infraestructura**: 16 aulas distribuidas en 5 pisos según especificación
+- **Horarios**: 6 bloques horarios (07:00-20:45)
+
+**2. ➕ Crear Datos Nuevos (Avanzado)**
+- Botón "Añadir Piso" para crear estructura de aulas
+- Botón "Añadir Aula" para definir capacidades específicas  
+- Botón "Añadir Grupo" para crear grupos personalizados
+- Botón "Añadir Horario" para configurar bloques de tiempo
+
+### 🎯 Experiencia Real del Usuario
+
+```mermaid
+journey
+    title Flujo Real de Usuario (Basado en Capturas)
+    section Inicio
+      Acceder al sistema: 3: Usuario
+      Ver paneles vacíos: 2: Usuario
+      Observar 0 aulas, 0 estudiantes: 1: Usuario
+    section Carga de Datos
+      Clic "Cargar Dataset": 5: Usuario
+      Ver datos completos cargados: 5: Usuario
+      Verificar 5 grupos, 16 aulas: 4: Usuario
+    section Configuración
+      Revisar parámetros δ=20%, λ=10: 4: Usuario
+      Editar si es necesario: 3: Usuario
+    section Ejecución
+      Clic "Ejecutar Optimización": 5: Usuario
+      Ver matriz de resultados: 5: Usuario
+      Analizar asignaciones: 4: Usuario
+```
+
+---
+
+## 🖥️ **Descripción Detallada de la Interfaz (Según Capturas)**
+
+### Elementos Visibles al Inicio
 
 ```mermaid
 graph LR
-    subgraph "📊 Panel Principal"
-        A[Grupos Académicos<br/>📋 Lista de 5 grupos<br/>✏️ Editable<br/>👁️ Visualización]
+    subgraph "💻 Interfaz Principal"
+        A[⚙️ Panel Parámetros<br/>• Umbral Subutilización: 20%<br/>• Factor Penalización: 10<br/>📝 Campos editables]
         
-        B[Aulas Disponibles<br/>🏢 16 aulas por pisos<br/>📏 Capacidades<br/>🏷️ Identificadores]
+        B[🎛️ Botones de Control<br/>📁 Cargar Dataset<br/>▶️ Ejecutar Optimización<br/>🗑️ Reiniciar Datos<br/>🔄 Estado: Habilitados]
         
-        C[Horarios Diarios<br/>⏰ 6 bloques<br/>🕐 Horarios específicos<br/>⏱️ Duración 2h 15min]
+        C[📊 Paneles de Información<br/>🏢 Aulas: 0/16<br/>👥 Estudiantes: 0/305<br/>⏰ Bloques: 0/6<br/>📋 Estado: Vacíos]
+        
+        D[📈 Área de Resultados<br/>📋 Sin matriz visible<br/>🔍 Esperando ejecución<br/>💾 Sin datos guardados]
     end
-    
-    subgraph "⚙️ Configuración"
-        D[Parámetro δ<br/>🎯 Umbral tolerancia<br/>📊 Rango: 10%-50%<br/>💡 Recomendado: 20%]
-        
-        E[Parámetro λ<br/>⚠️ Factor penalización<br/>📈 Rango: 0.01-1.0<br/>💡 Recomendado: 0.10]
-    end
-    
-    A --> F[🚀 Ejecutar Optimización]
-    B --> F
-    C --> F
-    D --> F
-    E --> F
     
     style A fill:#e8f5e8
-    style B fill:#fff3e0
-    style C fill:#e3f2fd
-    style D fill:#ffecb3
-    style E fill:#f3e5f5
-    style F fill:#ffcdd2
+    style B fill:#e3f2fd
+    style C fill:#fff3e0
+    style D fill:#fce4ec
+```
+
+### Transformación Después de "Cargar Dataset"
+
+| Antes (Sistema Vacío) | Después (Datos Cargados) |
+|----------------------|---------------------------|
+| 🏢 Aulas: **0 aulas** | 🏢 Aulas: **16 aulas distribuidas** |
+| 👥 Estudiantes: **0 estudiantes** | 👥 Estudiantes: **305 estudiantes total** |
+| ⏰ Bloques: **0 bloques** | ⏰ Bloques: **6 bloques horarios** |
+| 📊 Gráficos: **Sin datos** | 📊 Gráficos: **Listos para optimizar** |
+| ▶️ Ejecutar: **Sin datos** | ▶️ Ejecutar: **Botón activo** |
+
+### Estados de los Botones
+
+```mermaid
+stateDiagram-v2
+    [*] --> SistemaVacio
+    
+    SistemaVacio : 📁 Cargar Dataset: ✅ Activo
+    SistemaVacio : ▶️ Ejecutar: ❌ Sin datos
+    SistemaVacio : 🗑️ Reiniciar: ❌ Sin datos
+    
+    SistemaVacio --> DatosCargados : Clic "Cargar Dataset"
+    
+    DatosCargados : 📁 Cargar Dataset: ✅ Reactivo
+    DatosCargados : ▶️ Ejecutar: ✅ Listo
+    DatosCargados : 🗑️ Reiniciar: ✅ Disponible
+    
+    DatosCargados --> Ejecutando : Clic "Ejecutar"
+    
+    Ejecutando : 📁 Cargar Dataset: ⏳ Deshabilitado
+    Ejecutando : ▶️ Ejecutar: ⏳ Procesando
+    Ejecutando : 🗑️ Reiniciar: ⏳ Deshabilitado
+    
+    Ejecutando --> ResultadosVisibles : Optimización completa
+    
+    ResultadosVisibles : 📁 Cargar Dataset: ✅ Disponible
+    ResultadosVisibles : ▶️ Ejecutar: ✅ Re-ejecutar
+    ResultadosVisibles : 🗑️ Reiniciar: ✅ Limpiar todo
+    
+    ResultadosVisibles --> SistemaVacio : Clic "Reiniciar"
 ```
 
 ---
@@ -620,3 +763,71 @@ graph LR
 *🎓 Sistema de Optimización de Aulas MILP - Universidad*  
 *📅 Guía de Usuario v1.0 - Junio 2025*  
 *🔧 Para soporte técnico contactar: soporte@universidad.edu*
+
+---
+
+## ❓ **Preguntas Frecuentes (FAQ) - Basadas en la Experiencia Real**
+
+### 🚀 Sobre el Inicio del Sistema
+
+**P: ¿Por qué el sistema muestra 0 aulas, 0 estudiantes y 0 bloques al inicio?**
+R: Esto es **completamente normal**. Como muestran las capturas, el sistema inicia deliberadamente vacío para que el usuario tenga control total sobre los datos. Debes usar "Cargar Dataset" para obtener los datos universitarios.
+
+**P: ¿Los parámetros δ=20% y λ=10 son obligatorios?**
+R: No, son valores recomendados editables. Representan:
+- δ = 20%: Umbral de subutilización (tolerancia para aulas no completamente llenas)
+- λ = 10: Factor de penalización (peso dado a espacios no utilizados)
+
+**P: ¿Puedo cambiar los parámetros antes o después de cargar datos?**
+R: Sí, los parámetros son **siempre editables**, incluso con el sistema vacío. Puedes modificarlos en cualquier momento antes de ejecutar la optimización.
+
+### 📁 Sobre la Carga de Datos
+
+**P: ¿Qué contiene exactamente el "Dataset" que se puede cargar?**
+R: El dataset universitario incluye:
+- ✅ 5 grupos académicos con materias específicas (Cálculo I, Física I, etc.)
+- ✅ 305 estudiantes distribuidos (35+50+120+40+60)
+- ✅ 16 aulas en 5 pisos con capacidades definidas
+- ✅ 6 bloques horarios de 07:00 a 20:45
+
+**P: ¿Es obligatorio usar el dataset predefinido?**
+R: No, pero es **altamente recomendado** para el proyecto universitario. Puedes crear datos personalizados, pero el dataset garantiza consistencia con los requisitos académicos.
+
+**P: ¿Qué pasa si cargo el dataset varias veces?**
+R: El sistema reemplaza los datos anteriores. Es seguro recargar el dataset cuando sea necesario.
+
+### ⚙️ Sobre la Optimización
+
+**P: ¿Cuánto tiempo toma ejecutar la optimización?**
+R: Para el dataset universitario (5 grupos, 16 aulas, 6 bloques), típicamente 2-10 segundos dependiendo del hardware.
+
+**P: ¿Qué significa "matriz de asignación" en los resultados?**
+R: Es una tabla que muestra **exactamente** qué grupo está asignado a qué aula en cada bloque horario. Las celdas vacías indican aulas libres.
+
+**P: ¿Los resultados son siempre los mismos?**
+R: Sí, para los mismos datos y parámetros, el algoritmo MILP produce resultados determinísticos y óptimos.
+
+### 🔧 Solución de Problemas Comunes
+
+**P: El botón "Ejecutar Optimización" está deshabilitado**
+R: Verifica que hayas cargado datos. El sistema no puede optimizar sin grupos, aulas y horarios definidos.
+
+**P: Los parámetros no se guardan**
+R: Los parámetros se mantienen durante la sesión. Para configuración permanente, ajústalos antes de cada optimización.
+
+**P: No veo la matriz de resultados**
+R: La matriz aparece automáticamente después de completar la optimización. Si no aparece, verifica que la optimización haya terminado exitosamente.
+
+### 🎯 Mejores Prácticas
+
+**✅ Flujo Recomendado:**
+1. Iniciar sistema (observar estado vacío)
+2. Cargar dataset universitario
+3. Revisar/ajustar parámetros si es necesario
+4. Ejecutar optimización
+5. Analizar matriz de resultados
+
+**⚠️ Evita:**
+- Ejecutar optimización sin datos cargados
+- Modificar parámetros durante la ejecución
+- Cerrar el navegador durante la optimización
