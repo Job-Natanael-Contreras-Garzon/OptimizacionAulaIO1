@@ -1,8 +1,12 @@
 # 📖 Guía de Usuario - Sistema de Optimización de Aulas MILP
 
+**⚠️ NOTA**: Se han simplificado algunos diagramas para mejorar la compatibilidad con GitHub.
+
 ## 🎯 **Introducción**
 
-Esta guía te ayudará a utilizar el Sistema de Optimización de Asignación de Aulas basado en Programación Lineal Entera Mixta (MILP). 
+Esta guía te ayudará a utiliz        C[Paneles de Datos Vacios<br/>Aulas Disponibles: 0 aulas<br/>Grupos y Materias: 0 estudiantes<br/>Bloques Horarios: 0 bloques]
+        
+        D[Estado Inicial<br/>Sin datos precargados<br/>Todos los contadores en 0<br/>Solo parametros configurables]r el Sistema de Optimización de Asignación de Aulas basado en Programación Lineal Entera Mixta (MILP). 
 
 **🔑 Características Principales:**
 - **Inicio vacío**: El sistema inicia sin datos precargados (0 aulas, 0 estudiantes, 0 bloques)
@@ -112,10 +116,10 @@ flowchart TD
 
 ```mermaid
 graph TB
-    subgraph "🌐 Pantalla Inicial del Sistema"
-        A[⚙️ Parámetros de Optimización<br/>• Umbral Subutilización: 20%<br/>• Factor Penalización: 10<br/>✏️ Editables desde el inicio]
+    subgraph "Pantalla Inicial del Sistema"
+        A[Parametros de Optimizacion<br/>Umbral Subutilizacion: 20%<br/>Factor Penalizacion: 10<br/>Editables desde el inicio]
         
-        B[🔄 Botones de Acción<br/>📁 Cargar Dataset<br/>▶️ Ejecutar Optimización<br/>🗑️ Reiniciar Datos]
+        B[Botones de Accion<br/>Cargar Dataset<br/>Ejecutar Optimizacion<br/>Reiniciar Datos]
         
         C[📊 Paneles de Datos Vacíos<br/>🏢 Aulas Disponibles: 0 aulas<br/>� Grupos y Materias: 0 estudiantes<br/>⏰ Bloques Horarios: 0 bloques]
     end
@@ -186,17 +190,17 @@ journey
     title Flujo Real de Usuario (Basado en Capturas)
     section Inicio
       Acceder al sistema: 3: Usuario
-      Ver paneles vacíos: 2: Usuario
-      Observar 0 aulas, 0 estudiantes: 1: Usuario
+      Ver paneles vacios: 2: Usuario
+      Observar 0 elementos: 1: Usuario
     section Carga de Datos
-      Clic "Cargar Dataset": 5: Usuario
-      Ver datos completos cargados: 5: Usuario
-      Verificar 5 grupos, 16 aulas: 4: Usuario
-    section Configuración
-      Revisar parámetros δ=20%, λ=10: 4: Usuario
+      Clic Cargar Dataset: 5: Usuario
+      Ver datos completos: 5: Usuario
+      Verificar 5 grupos 16 aulas: 4: Usuario
+    section Configuracion
+      Revisar parametros: 4: Usuario
       Editar si es necesario: 3: Usuario
-    section Ejecución
-      Clic "Ejecutar Optimización": 5: Usuario
+    section Ejecucion
+      Clic Ejecutar Optimizacion: 5: Usuario
       Ver matriz de resultados: 5: Usuario
       Analizar asignaciones: 4: Usuario
 ```
@@ -241,29 +245,26 @@ graph LR
 stateDiagram-v2
     [*] --> SistemaVacio
     
-    SistemaVacio : 📁 Cargar Dataset: ✅ Activo
-    SistemaVacio : ▶️ Ejecutar: ❌ Sin datos
-    SistemaVacio : 🗑️ Reiniciar: ❌ Sin datos
-    
     SistemaVacio --> DatosCargados : Clic "Cargar Dataset"
-    
-    DatosCargados : 📁 Cargar Dataset: ✅ Reactivo
-    DatosCargados : ▶️ Ejecutar: ✅ Listo
-    DatosCargados : 🗑️ Reiniciar: ✅ Disponible
-    
     DatosCargados --> Ejecutando : Clic "Ejecutar"
-    
-    Ejecutando : 📁 Cargar Dataset: ⏳ Deshabilitado
-    Ejecutando : ▶️ Ejecutar: ⏳ Procesando
-    Ejecutando : 🗑️ Reiniciar: ⏳ Deshabilitado
-    
     Ejecutando --> ResultadosVisibles : Optimización completa
-    
-    ResultadosVisibles : 📁 Cargar Dataset: ✅ Disponible
-    ResultadosVisibles : ▶️ Ejecutar: ✅ Re-ejecutar
-    ResultadosVisibles : 🗑️ Reiniciar: ✅ Limpiar todo
-    
     ResultadosVisibles --> SistemaVacio : Clic "Reiniciar"
+    
+    state SistemaVacio {
+        note right : 📁 Cargar Dataset - Activo<br/>▶️ Ejecutar - Sin datos<br/>🗑️ Reiniciar - Sin datos
+    }
+    
+    state DatosCargados {
+        note right : 📁 Cargar Dataset - Reactivo<br/>▶️ Ejecutar - Listo<br/>🗑️ Reiniciar - Disponible
+    }
+    
+    state Ejecutando {
+        note right : 📁 Cargar Dataset - Deshabilitado<br/>▶️ Ejecutar - Procesando<br/>🗑️ Reiniciar - Deshabilitado
+    }
+    
+    state ResultadosVisibles {
+        note right : 📁 Cargar Dataset - Disponible<br/>▶️ Ejecutar - Re-ejecutar<br/>🗑️ Reiniciar - Limpiar todo
+    }
 ```
 
 ---
