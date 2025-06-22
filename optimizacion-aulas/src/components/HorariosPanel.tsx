@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Clock, PlusCircle, Edit2, Trash2, X } from 'lucide-react';
+import React, { useState, memo } from 'react';
+import { Clock, PlusCircle, Edit2, Trash2, CalendarClock } from 'lucide-react';
 import { Horario } from '../types';
-import Modal from './Modal';
+import { FormModal, FormField } from './FormModal';
+import DataCard from './DataCard';
+import ConfirmDialog from './ConfirmDialog';
 
 interface HorariosPanelProps {
   horarios: Horario[];
@@ -91,28 +93,38 @@ const HorariosPanel: React.FC<HorariosPanelProps> = ({ horarios, onAddHorario, o
       </div>
       <div className="modern-grid-cols-1 scrollable">
         {horarios.map(horario => (
-          <div key={horario.id} className="list-item-group">
-            <div className="item-header">
-              <h3>{horario.nombre}</h3>
-              <div className="action-buttons">
+          <DataCard
+            key={horario.id}
+            title={horario.nombre}
+            subtitle={
+              <div className="flex items-center gap-2">
+                <span className="time-badge">
+                  <CalendarClock size={12} />
+                  {horario.inicio} - {horario.fin}
+                </span>
+              </div>
+            }
+            icon={Clock}
+            iconColor="orange"
+            actions={
+              <>
                 <button 
-                  onClick={(e) => { e.stopPropagation(); handleEditHorarioClick(horario); }} 
+                  onClick={() => handleEditHorarioClick(horario)} 
                   className="icon-button" 
                   title="Editar horario"
                 >
                   <Edit2 size={14} />
                 </button>
                 <button 
-                  onClick={(e) => { e.stopPropagation(); handleDeleteHorarioClick(horario.id); }} 
+                  onClick={() => handleDeleteHorarioClick(horario.id)} 
                   className="icon-button danger" 
                   title="Eliminar horario"
                 >
                   <Trash2 size={14} />
                 </button>
-              </div>
-            </div>
-            <p>{horario.inicio} - {horario.fin}</p>
-          </div>
+              </>
+            }
+          />
         ))}
       </div>
       <div className="modern-card-footer">
@@ -120,90 +132,73 @@ const HorariosPanel: React.FC<HorariosPanelProps> = ({ horarios, onAddHorario, o
       </div>
 
       {/* Horario Form Modal */}
-      <Modal
+      <FormModal
         isOpen={showHorarioModal}
         onClose={() => setShowHorarioModal(false)}
         title={currentHorario ? 'Editar Bloque Horario' : 'Añadir Nuevo Bloque Horario'}
+        subtitle={currentHorario ? 'Modifica la información del bloque horario' : 'Crea un nuevo bloque de tiempo para organizar clases'}
+        onSubmit={handleHorarioSubmit}
+        isEditing={!!currentHorario}
       >
-        <form onSubmit={handleHorarioSubmit} className="modal-form">
-          <div className="form-group">
-            <label>Nombre del Bloque</label>
+        <FormField 
+          label="Nombre del Bloque" 
+          required 
+          icon={<CalendarClock size={16} />}
+          help="Nombre descriptivo del bloque horario (ej: Mañana Temprano, Tarde)"
+        >
+          <input
+            type="text"
+            name="nombre"
+            value={horarioForm.nombre}
+            onChange={handleInputChange}
+            required
+            placeholder="Ej: Mañana Temprano"
+          />
+        </FormField>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <FormField 
+            label="Hora de Inicio" 
+            required
+            icon={<Clock size={16} />}
+            help="Hora de inicio del bloque"
+          >
             <input
-              type="text"
-              name="nombre"
-              value={horarioForm.nombre}
+              type="time"
+              name="inicio"
+              value={horarioForm.inicio}
               onChange={handleInputChange}
               required
-              placeholder="Ej: Mañana Temprano"
             />
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Hora de Inicio</label>
-              <input
-                type="time"
-                name="inicio"
-                value={horarioForm.inicio}
-                onChange={handleInputChange}
-                required
-                className="time-input"
-              />
-            </div>
-            <div className="form-group">
-              <label>Hora de Fin</label>
-              <input
-                type="time"
-                name="fin"
-                value={horarioForm.fin}
-                onChange={handleInputChange}
-                required
-                className="time-input"
-              />
-            </div>
-          </div>
-          <div className="modal-actions">
-            <button 
-              type="button" 
-              className="modern-button secondary" 
-              onClick={() => setShowHorarioModal(false)}
-            >
-              Cancelar
-            </button>
-            <button type="submit" className="modern-button primary">
-              {currentHorario ? 'Guardar Cambios' : 'Añadir Horario'}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        title="Confirmar Eliminación"
-      >
-        <div className="delete-confirmation">
-          <p>¿Estás seguro de que deseas eliminar este bloque horario? Esta acción no se puede deshacer.</p>
-          <div className="modal-actions">
-            <button 
-              type="button" 
-              className="modern-button secondary" 
-              onClick={() => setShowDeleteModal(false)}
-            >
-              Cancelar
-            </button>
-            <button 
-              type="button" 
-              className="modern-button danger"
-              onClick={handleDeleteConfirm}
-            >
-              Eliminar Bloque
-            </button>
-          </div>
+          </FormField>
+          
+          <FormField 
+            label="Hora de Fin" 
+            required
+            icon={<Clock size={16} />}
+            help="Hora de finalización del bloque"
+          >
+            <input
+              type="time"
+              name="fin"
+              value={horarioForm.fin}
+              onChange={handleInputChange}
+              required
+            />
+          </FormField>
         </div>
-      </Modal>
+      </FormModal>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={showDeleteModal}
+        onCancel={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Confirmar Eliminación de Bloque Horario"
+        message="¿Estás seguro de que deseas eliminar este bloque horario? Esta acción no se puede deshacer."
+      />
     </div>
   );
 };
 
-export default HorariosPanel;
+export default memo(HorariosPanel);

@@ -31,6 +31,13 @@ export interface Asignacion {
   horario: Horario;
   utilizacion: number;
   penalizacion: number;
+  // Additional properties for display
+  grupoNombre: string;
+  aulaNombre: string;
+  pisoNombre: string;
+  horarioNombre: string;
+  capacidadAula: number;
+  porcentajeOcupacion: number;
 }
 
 export interface ResultadoOptimizacion {

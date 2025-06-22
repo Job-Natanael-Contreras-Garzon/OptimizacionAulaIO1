@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Users, PlusCircle, Edit2, Trash2, X } from 'lucide-react';
+import React, { useState, memo } from 'react';
+import { Users, PlusCircle, Edit2, Trash2, BookOpen, GraduationCap } from 'lucide-react';
 import { Grupo } from '../types';
-import Modal from './Modal';
+import { FormModal, FormField } from './FormModal';
+import DataCard from './DataCard';
+import ConfirmDialog from './ConfirmDialog';
 
 interface GruposPanelProps {
   grupos: Grupo[];
@@ -86,150 +88,168 @@ const GruposPanel: React.FC<GruposPanelProps> = ({ grupos, onAddGrupo, onEditGru
       </div>
       <div className="modern-grid-cols-1 scrollable">
         {grupos.map(grupo => (
-          <div key={grupo.id} className="list-item-group">
-            <div className="item-header">
-              <h3>{grupo.nombre}</h3>
-              <div className="action-buttons">
-                <button onClick={(e) => { e.stopPropagation(); handleEditClick(grupo); }} className="icon-button" title="Editar grupo">
+          <DataCard
+            key={grupo.id}
+            title={grupo.nombre}
+            subtitle={
+              <div className="flex items-center gap-2">
+                <span className="student-badge">
+                  <GraduationCap size={12} />
+                  {grupo.estudiantes} estudiantes
+                </span>
+              </div>
+            }
+            icon={BookOpen}
+            iconColor="purple"
+            actions={
+              <>
+                <button 
+                  onClick={() => handleEditClick(grupo)} 
+                  className="icon-button" 
+                  title="Editar grupo"
+                >
                   <Edit2 size={14} />
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(grupo.id); }} className="icon-button danger" title="Eliminar grupo">
+                <button 
+                  onClick={() => handleDeleteClick(grupo.id)} 
+                  className="icon-button danger" 
+                  title="Eliminar grupo"
+                >
                   <Trash2 size={14} />
                 </button>
-              </div>
+              </>
+            }
+          >
+            <div className="materia-info">
+              <strong>Materia:</strong> {grupo.materia}
             </div>
-            <p>{grupo.materia}</p>
-            <p className="highlight-purple">{grupo.estudiantes} estudiantes</p>
-          </div>
+          </DataCard>
         ))}
       </div>
 
       {/* Add Grupo Modal */}
-      <Modal 
-        isOpen={showAddModal} 
+      <FormModal
+        isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         title="Añadir Nuevo Grupo"
+        subtitle="Crea un nuevo grupo académico con su materia y capacidad"
+        onSubmit={handleSubmitAdd}
+        isEditing={false}
       >
-        <form onSubmit={handleSubmitAdd} className="modal-form">
-          <div className="form-group">
-            <label>Nombre del Grupo</label>
-            <input
-              type="text"
-              name="nombre"
-              value={formData.nombre}
-              onChange={handleInputChange}
-              required
-              placeholder="Ej: Grupo 1"
-            />
-          </div>
-          <div className="form-group">
-            <label>Materia</label>
-            <input
-              type="text"
-              name="materia"
-              value={formData.materia}
-              onChange={handleInputChange}
-              required
-              placeholder="Ej: Cálculo I"
-            />
-          </div>
-          <div className="form-group">
-            <label>Número de Estudiantes</label>
-            <input
-              type="number"
-              name="estudiantes"
-              min="1"
-              value={formData.estudiantes}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <div className="modal-actions">
-            <button type="button" className="modern-button secondary" onClick={() => setShowAddModal(false)}>
-              Cancelar
-            </button>
-            <button type="submit" className="modern-button primary">
-              Guardar
-            </button>
-          </div>
-        </form>
-      </Modal>
+        <FormField 
+          label="Nombre del Grupo" 
+          required 
+          icon={<Users size={16} />}
+          help="Nombre identificativo del grupo (ej: Grupo A, Sección 1)"
+        >
+          <input
+            type="text"
+            name="nombre"
+            value={formData.nombre}
+            onChange={handleInputChange}
+            required
+            placeholder="Ej: Grupo 1"
+          />
+        </FormField>
+        
+        <FormField 
+          label="Materia" 
+          required
+          icon={<BookOpen size={16} />}
+          help="Nombre de la asignatura o materia que imparte este grupo"
+        >
+          <input
+            type="text"
+            name="materia"
+            value={formData.materia}
+            onChange={handleInputChange}
+            required
+            placeholder="Ej: Cálculo I"
+          />
+        </FormField>
+        
+        <FormField 
+          label="Número de Estudiantes" 
+          required
+          icon={<GraduationCap size={16} />}
+          help="Cantidad de estudiantes que conforman el grupo"
+        >
+          <input
+            type="number"
+            name="estudiantes"
+            min="1"
+            value={formData.estudiantes}
+            onChange={handleInputChange}
+            required
+            placeholder="25"
+          />
+        </FormField>
+      </FormModal>
 
       {/* Edit Grupo Modal */}
-      <Modal 
-        isOpen={showEditModal} 
+      <FormModal
+        isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         title="Editar Grupo"
+        subtitle="Modifica la información del grupo académico"
+        onSubmit={handleSubmitEdit}
+        isEditing={true}
       >
-        <form onSubmit={handleSubmitEdit} className="modal-form">
-          <div className="form-group">
-            <label>Nombre del Grupo</label>
-            <input
-              type="text"
-              name="nombre"
-              value={formData.nombre}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Materia</label>
-            <input
-              type="text"
-              name="materia"
-              value={formData.materia}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Número de Estudiantes</label>
-            <input
-              type="number"
-              name="estudiantes"
-              min="1"
-              value={formData.estudiantes}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <div className="modal-actions">
-            <button type="button" className="modern-button secondary" onClick={() => setShowEditModal(false)}>
-              Cancelar
-            </button>
-            <button type="submit" className="modern-button primary">
-              Guardar Cambios
-            </button>
-          </div>
-        </form>
-      </Modal>
+        <FormField 
+          label="Nombre del Grupo" 
+          required 
+          icon={<Users size={16} />}
+          help="Nombre identificativo del grupo"
+        >
+          <input
+            type="text"
+            name="nombre"
+            value={formData.nombre}
+            onChange={handleInputChange}
+            required
+          />
+        </FormField>
+        
+        <FormField 
+          label="Materia" 
+          required
+          icon={<BookOpen size={16} />}
+          help="Nombre de la asignatura o materia"
+        >
+          <input
+            type="text"
+            name="materia"
+            value={formData.materia}
+            onChange={handleInputChange}
+            required
+          />
+        </FormField>
+        
+        <FormField 
+          label="Número de Estudiantes" 
+          required
+          icon={<GraduationCap size={16} />}
+          help="Cantidad de estudiantes en el grupo"
+        >
+          <input
+            type="number"
+            name="estudiantes"
+            min="1"
+            value={formData.estudiantes}
+            onChange={handleInputChange}
+            required
+          />
+        </FormField>
+      </FormModal>
 
-      {/* Delete Confirmation Modal */}
-      <Modal 
-        isOpen={showDeleteModal} 
-        onClose={() => setShowDeleteModal(false)}
-        title="Confirmar Eliminación"
-      >
-        <div className="delete-confirmation">
-          <p>¿Estás seguro de que deseas eliminar este grupo? Esta acción no se puede deshacer.</p>
-          <div className="modal-actions">
-            <button 
-              type="button" 
-              className="modern-button secondary" 
-              onClick={() => setShowDeleteModal(false)}
-            >
-              Cancelar
-            </button>
-            <button 
-              type="button" 
-              className="modern-button danger"
-              onClick={handleDeleteConfirm}
-            >
-              Eliminar
-            </button>
-          </div>
-        </div>
-      </Modal>
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={showDeleteModal}
+        onCancel={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Confirmar Eliminación de Grupo"
+        message="¿Estás seguro de que deseas eliminar este grupo? Esta acción no se puede deshacer."
+      />
       <div className="modern-card-footer">
         <p><strong>Total:</strong> {grupos.reduce((sum, g) => sum + g.estudiantes, 0)} estudiantes</p>
       </div>
@@ -237,4 +257,4 @@ const GruposPanel: React.FC<GruposPanelProps> = ({ grupos, onAddGrupo, onEditGru
   );
 };
 
-export default GruposPanel;
+export default memo(GruposPanel);

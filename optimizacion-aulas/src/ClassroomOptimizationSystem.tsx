@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import GLPK from 'glpk.js';
-import { Calculator, Building, Clock, Users, Settings, Play, CheckCircle, PlusCircle, PlusSquare, X, Edit2, Trash2 } from 'lucide-react';
+import { Building, Clock, Users, Settings, Play, CheckCircle, PlusSquare, Trash2 } from 'lucide-react';
 import './Modern.css';
-import { Piso, Aula, Grupo, Horario, Asignacion, ResultadoOptimizacion } from './types';
+import { Piso, Aula, Grupo, Horario, ResultadoOptimizacion } from './types';
 import AulasPanel from './components/AulasPanel';
 import GruposPanel from './components/GruposPanel';
 import HorariosPanel from './components/HorariosPanel';
@@ -85,6 +84,24 @@ const ClassroomOptimizationSystem: React.FC = () => {
 
   // Estado para el diálogo de confirmación
   const [confirmState, setConfirmState] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: (() => void) | null }>({ isOpen: false, title: '', message: '', onConfirm: null });
+  
+  // Estado para el diálogo de confirmación de reinicio
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // Función para reiniciar todos los datos
+  const reiniciarDatos = () => {
+    setPisos([]);
+    setAulas([]);
+    setGrupos([]);
+    setHorarios([]);
+    setResultado(null);
+    // Limpiar localStorage
+    localStorage.removeItem('pisos');
+    localStorage.removeItem('aulas');
+    localStorage.removeItem('grupos');
+    localStorage.removeItem('horarios');
+    setShowResetConfirm(false);
+  };
 
   // Estado para los diálogos
   const [dialogOpen, setDialogOpen] = useState<'piso' | 'aula' | 'grupo' | 'horario' | null>(null);
@@ -105,33 +122,62 @@ const ClassroomOptimizationSystem: React.FC = () => {
     if (pisos.length === 0) return 1;
     return Math.max(...pisos.map(p => p.numero)) + 1;
   };
-  
   // Obtener aulas filtradas por piso
   const getAulasByPiso = (pisoId: number): Aula[] => {
     return aulas.filter(aula => aula.pisoId === pisoId);
   };
 
-  // Funciones para manejar los diálogos
-  const handleOpenDialog = (tipo: 'piso' | 'aula' | 'grupo' | 'horario', itemToEdit: any | null = null) => {
-    if (itemToEdit) {
-      if (tipo === 'piso') setNewPiso(itemToEdit);
-      else if (tipo === 'aula') setNewAula(itemToEdit);
-      else if (tipo === 'grupo') setNewGrupo(itemToEdit);
-      else if (tipo === 'horario') setNewHorario(itemToEdit);
+  // Función para obtener el título del diálogo según el tipo y si está editando
+  const getDialogTitle = (type: string, isEditing: boolean): string => {
+    const titles: Record<string, string> = {
+      piso: isEditing ? 'Editar Piso' : 'Nuevo Piso',
+      aula: isEditing ? 'Editar Aula' : 'Nueva Aula',
+      grupo: isEditing ? 'Editar Grupo' : 'Nuevo Grupo',
+      horario: isEditing ? 'Editar Horario' : 'Nuevo Horario',
+    };
+    return titles[type] || '';
+  };
+
+  // Manejador para enviar el formulario del diálogo
+  const handleDialogSubmit = (type: string) => {
+    switch (type) {
+      case 'piso':
+        handleAddPiso();
+        break;
+      case 'aula':
+        handleAddAula();
+        break;
+      case 'grupo':
+        handleAddGrupo();
+        break;
+      case 'horario':
+        handleAddHorario();
+        break;
+    }
+    handleCloseDialog();
+  };
+
+  // Función para manejar la apertura de diálogos
+  const handleOpenDialog = (type: 'piso' | 'aula' | 'grupo' | 'horario', item: any = null) => {
+    if (item) {
+      if (type === 'piso') setNewPiso(item);
+      else if (type === 'aula') setNewAula(item);
+      else if (type === 'grupo') setNewGrupo(item);
+      else if (type === 'horario') setNewHorario(item);
     } else {
       // Resetear para creación
-      if (tipo === 'piso') {
+      if (type === 'piso') {
         const nextNumero = getNextPisoNumero();
         setNewPiso({ id: null, numero: nextNumero, nombre: `Piso ${nextNumero}` });
-      } else if (tipo === 'aula') {
+      } else if (type === 'aula') {
         setNewAula({ id: null, nombre: '', pisoId: pisos[0]?.id || 0, capacidad: 40 });
-      } else if (tipo === 'grupo') {
+      } else if (type === 'grupo') {
         setNewGrupo({ id: null, nombre: '', materia: '', estudiantes: 30 });
-      } else if (tipo === 'horario') {
+      } else if (type === 'horario') {
         setNewHorario({ id: null, nombre: `Bloque ${horarios.length + 1}`, inicio: '07:00', fin: '09:15' });
       }
     }
-    setDialogOpen(tipo);
+    setDialogOpen(type);
   };
 
   const handleCloseDialog = () => {
@@ -139,16 +185,21 @@ const ClassroomOptimizationSystem: React.FC = () => {
   };
 
   // Manejar pisos
-  const handleAddPiso = () => {
-    if (!newPiso.nombre || !newPiso.numero) {
+  const handleAddPiso = (pisoData?: Omit<Piso, 'id'>) => {
+    const pisoToAdd = pisoData || {
+      nombre: newPiso.nombre,
+      numero: newPiso.numero
+    };
+    
+    if (!pisoToAdd.nombre || !pisoToAdd.numero) {
       alert('Por favor, complete todos los campos del piso.');
       return;
     }
     
     if (newPiso.id) {
-      setPisos(prev => prev.map(p => p.id === newPiso.id ? { ...newPiso, id: newPiso.id! } : p));
+      setPisos(prev => prev.map(p => p.id === newPiso.id ? { ...pisoToAdd, id: newPiso.id! } : p));
     } else {
-      setPisos(prev => [...prev, { ...newPiso, id: Date.now() }]);
+      setPisos(prev => [...prev, { ...pisoToAdd, id: Date.now() }]);
     }
     handleCloseDialog();
   };
@@ -168,16 +219,22 @@ const ClassroomOptimizationSystem: React.FC = () => {
   };
 
   // Manejar aulas
-  const handleAddAula = () => {
-    if (!newAula.nombre || !newAula.pisoId || !newAula.capacidad) {
+  const handleAddAula = (aulaData?: Omit<Aula, 'id'>) => {
+    const aulaToAdd = aulaData || {
+      nombre: newAula.nombre,
+      pisoId: newAula.pisoId,
+      capacidad: newAula.capacidad
+    };
+    
+    if (!aulaToAdd.nombre || !aulaToAdd.pisoId || !aulaToAdd.capacidad) {
       alert('Por favor, complete todos los campos del aula.');
       return;
     }
     
     if (newAula.id) {
-      setAulas(prev => prev.map(a => a.id === newAula.id ? { ...newAula, id: newAula.id! } : a));
+      setAulas(prev => prev.map(a => a.id === newAula.id ? { ...aulaToAdd, id: newAula.id! } : a));
     } else {
-      setAulas(prev => [...prev, { ...newAula, id: Date.now() }]);
+      setAulas(prev => [...prev, { ...aulaToAdd, id: Date.now() }]);
     }
     handleCloseDialog();
   };
@@ -192,19 +249,23 @@ const ClassroomOptimizationSystem: React.FC = () => {
         setConfirmState({ isOpen: false, title: '', message: '', onConfirm: null });
       }
     });
-  };
-
-  // Manejar grupos
-  const handleAddGrupo = () => {
-    if (!newGrupo.nombre || !newGrupo.materia || !newGrupo.estudiantes) {
+  };  // Manejar grupos
+  const handleAddGrupo = (grupoData?: Omit<Grupo, 'id'>) => {
+    const grupoToAdd = grupoData || {
+      nombre: newGrupo.nombre,
+      materia: newGrupo.materia,
+      estudiantes: newGrupo.estudiantes
+    };
+    
+    if (!grupoToAdd.nombre || !grupoToAdd.materia || !grupoToAdd.estudiantes) {
       alert('Por favor, complete todos los campos.');
       return;
     }
-    
+
     if (newGrupo.id) {
-      setGrupos(prev => prev.map(g => g.id === newGrupo.id ? { ...newGrupo, id: newGrupo.id! } : g));
+      setGrupos(prev => prev.map(g => g.id === newGrupo.id ? { ...grupoToAdd, id: newGrupo.id! } : g));
     } else {
-      setGrupos(prev => [...prev, { ...newGrupo, id: Date.now() }]);
+      setGrupos(prev => [...prev, { ...grupoToAdd, id: Date.now() }]);
     }
     handleCloseDialog();
   };
@@ -219,19 +280,23 @@ const ClassroomOptimizationSystem: React.FC = () => {
         setConfirmState({ isOpen: false, title: '', message: '', onConfirm: null });
       }
     });
-  };
-
-  // Manejar horarios
-  const handleAddHorario = () => {
-    if (!newHorario.nombre || !newHorario.inicio || !newHorario.fin) {
+  };  // Manejar horarios
+  const handleAddHorario = (horarioData?: Omit<Horario, 'id'>) => {
+    const horarioToAdd = horarioData || {
+      nombre: newHorario.nombre,
+      inicio: newHorario.inicio,
+      fin: newHorario.fin
+    };
+    
+    if (!horarioToAdd.nombre || !horarioToAdd.inicio || !horarioToAdd.fin) {
       alert('Por favor, complete todos los campos.');
       return;
     }
-    
+
     if (newHorario.id) {
-      setHorarios(prev => prev.map(h => h.id === newHorario.id ? { ...newHorario, id: newHorario.id! } : h));
+      setHorarios(prev => prev.map(h => h.id === newHorario.id ? { ...horarioToAdd, id: newHorario.id! } : h));
     } else {
-      setHorarios(prev => [...prev, { ...newHorario, id: Date.now() }]);
+      setHorarios(prev => [...prev, { ...horarioToAdd, id: Date.now() }]);
     }
     handleCloseDialog();
   };
@@ -248,295 +313,230 @@ const ClassroomOptimizationSystem: React.FC = () => {
     });
   };
 
-  // Cargar dataset
+  // Función para cargar el dataset inicial
   const handleLoadDataset = () => {
     setPisos(initialData.pisos);
     setAulas(initialData.aulas);
     setGrupos(initialData.grupos);
     setHorarios(initialData.horarios);
+    setResultado(null);
   };
 
-  // Título del diálogo
-  const getDialogTitle = () => {
-    switch (dialogOpen) {
-      case 'piso': return newPiso.id ? 'Editar Piso' : 'Agregar Piso';
-      case 'aula': return newAula.id ? 'Editar Aula' : 'Agregar Aula';
-      case 'grupo': return newGrupo.id ? 'Editar Grupo' : 'Agregar Grupo';
-      case 'horario': return newHorario.id ? 'Editar Horario' : 'Agregar Horario';
-      default: return '';
-    }
-  };
-
-  // Submit del diálogo
-  const handleDialogSubmit = () => {
-    switch (dialogOpen) {
-      case 'piso': handleAddPiso(); break;
-      case 'aula': handleAddAula(); break;
-      case 'grupo': handleAddGrupo(); break;
-      case 'horario': handleAddHorario(); break;
-    }
-  };
-
-  const isEditing = 
-    (dialogOpen === 'piso' && !!newPiso.id) ||
-    (dialogOpen === 'aula' && !!newAula.id) ||
-    (dialogOpen === 'grupo' && !!newGrupo.id) ||
-    (dialogOpen === 'horario' && !!newHorario.id);
-
-  // Algoritmo de optimización (usando glpk.js)
-  const optimizarAsignaciones = async (): Promise<void> => {
+  // Función para optimizar las asignaciones (algoritmo greedy mejorado con optimización de rendimiento)
+  const optimizarAsignaciones = async () => {
     setOptimizando(true);
-
-    const glpk = await GLPK();
-
-
-    const lp: any = {
-      name: 'ClassroomOptimization',
-      objective: {
-        direction: glpk.GLP_MAX,
-        name: 'obj',
-        vars: []
-      },
-      subjectTo: [],
-      binaries: []
-    };
-
-    const x_vars: { [key: string]: { grupo: Grupo, aula: Aula, horario: Horario } } = {};
-
-    // Create variables and add to objective
-    for (const grupo of grupos) {
-      for (const aula of aulas) {
-        // Constraint C: Only create x_ijt if capacity is sufficient
-        if (aula.capacidad < grupo.estudiantes) {
-          continue;
-        }
-
-        for (const horario of horarios) {
-          const x_var_name = `x_${grupo.id}_${aula.id}_${horario.id}`;
-          lp.binaries.push(x_var_name);
-          lp.objective.vars.push({ name: x_var_name, coef: grupo.estudiantes });
-          x_vars[x_var_name] = { grupo, aula, horario };
-
-          const u_var_name = `u_${grupo.id}_${aula.id}_${horario.id}`;
-          // U_ijt are continuous by default, no need to add to binaries/generals
-          lp.objective.vars.push({ name: u_var_name, coef: -factorPenalizacion });
-        }
-      }
-    }
-
-    // Constraint A: Unique assignment per group (ΣΣ x_ijt = 1 ∀i)
-    for (const grupo of grupos) {
-      const constraint_vars = [];
-      for (const aula of aulas) {
-        if (aula.capacidad < grupo.estudiantes) continue;
-        for (const horario of horarios) {
-          constraint_vars.push({ name: `x_${grupo.id}_${aula.id}_${horario.id}`, coef: 1.0 });
-        }
-      }
-      if (constraint_vars.length > 0) { // Only add constraint if there are possible assignments
-        lp.subjectTo.push({
-          name: `cons_group_${grupo.id}`,
-          vars: constraint_vars,
-          bnds: { type: glpk.GLP_FX, lb: 1.0, ub: 1.0 } // Fixed to 1
-        });
-      }
-    }
-
-    // Constraint B: One assignment per classroom-timeslot (Σ x_ijt ≤ 1 ∀j,t)
-    for (const aula of aulas) {
-      for (const horario of horarios) {
-        const constraint_vars = [];
-        for (const grupo of grupos) {
-          if (aula.capacidad < grupo.estudiantes) continue;
-          constraint_vars.push({ name: `x_${grupo.id}_${aula.id}_${horario.id}`, coef: 1.0 });
-        }
-        if (constraint_vars.length > 0) { // Only add constraint if there are possible assignments
-          lp.subjectTo.push({
-            name: `cons_aula_horario_${aula.id}_${horario.id}`,
-            vars: constraint_vars,
-            bnds: { type: glpk.GLP_UP, ub: 1.0 } // Upper bound 1
-          });
-        }
-      }
-    }
-
-    // Constraint D: Underutilization penalty (U_ijt ≥ x_ijt × (C_j - S_i - δ))
-    // U_ijt - x_ijt * (C_j - S_i - δ) ≥ 0
-    for (const grupo of grupos) {
-      for (const aula of aulas) {
-        if (aula.capacidad < grupo.estudiantes) continue;
-        for (const horario of horarios) {
-          const x_var_name = `x_${grupo.id}_${aula.id}_${horario.id}`;
-          const u_var_name = `u_${grupo.id}_${aula.id}_${horario.id}`;
-          const umbralToleranciaValor = (umbralDelta / 100) * aula.capacidad;
-          const coef_x = -(aula.capacidad - grupo.estudiantes - umbralToleranciaValor);
-
-          lp.subjectTo.push({
-            name: `cons_underutil_${grupo.id}_${aula.id}_${horario.id}`,
-            vars: [
-              { name: u_var_name, coef: 1.0 },
-              { name: x_var_name, coef: coef_x }
-            ],
-            bnds: { type: glpk.GLP_LO, lb: 0.0 } // Lower bound 0
-          });
-        }
-      }
-    }
-
-    let solvedAssignments: Asignacion[] = [];
-    let totalObjectiveValue = 0;
-    let totalStudentsAssigned = 0;
-    let totalPenalization = 0;
-    let totalUtilization = 0;
-    let assignedCount = 0;
-
     try {
-      const res = await glpk.solve(lp, { msglev: glpk.GLP_MSG_OFF, presol: true });
+      // Validar que tengamos datos suficientes
+      if (grupos.length === 0 || aulas.length === 0 || horarios.length === 0) {
+        alert('Necesitas tener al menos un grupo, un aula y un horario para optimizar.');
+        setOptimizando(false);
+        return;
+      }
 
-      if (res && res.result && (res.result.status === glpk.GLP_OPT || res.result.status === glpk.GLP_FEAS)) {
-        totalObjectiveValue = res.result.z;
-        for (const varName in res.result.vars) {
-          if (varName.startsWith('x_') && res.result.vars[varName] > 0.99) { // Check for binary variable close to 1
-            const { grupo, aula, horario } = x_vars[varName];
-            const utilizacion = (grupo.estudiantes / aula.capacidad) * 100;
-            const penalizacionVarName = `u_${grupo.id}_${aula.id}_${horario.id}`;
-            const penalizacion = res.result.vars[penalizacionVarName] || 0;
+      // Agregar pequeño delay para permitir que la UI se actualice
+      await new Promise(resolve => setTimeout(resolve, 50));
 
-            solvedAssignments.push({ grupo, aula, horario, utilizacion, penalizacion });
+      const asignaciones: any[] = [];
+      const aulasOcupadas: { [key: string]: boolean } = {};
+      const gruposAsignados: { [key: number]: boolean } = {};
+      
+      // Pre-filtrar aulas válidas para cada grupo (optimización)
+      const gruposConAulasValidas = grupos.map(grupo => ({
+        grupo,
+        aulasValidas: aulas.filter(aula => grupo.estudiantes <= aula.capacidad)
+      })).filter(item => item.aulasValidas.length > 0);
 
-            totalStudentsAssigned += grupo.estudiantes;
-            totalPenalization += penalizacion;
-            totalUtilization += utilizacion;
-            assignedCount++;
+      // Crear combinaciones válidas de forma más eficiente
+      const combinacionesValidas: Array<{
+        grupo: Grupo,
+        aula: Aula,
+        horario: Horario,
+        piso: Piso,
+        utilidad: number,
+        utilizacion: number,
+        penalizacion: number
+      }> = [];
+
+      for (const { grupo, aulasValidas } of gruposConAulasValidas) {
+        for (const aula of aulasValidas) {
+          const piso = pisos.find(p => p.id === aula.pisoId)!;
+          const utilizacion = (grupo.estudiantes / aula.capacidad) * 100;
+          const espaciosVacios = aula.capacidad - grupo.estudiantes;
+          const espaciosPenalizados = Math.max(0, espaciosVacios - (umbralDelta / 100) * aula.capacidad);
+          const penalizacion = (factorPenalizacion / 10) * espaciosPenalizados;
+          const utilidad = grupo.estudiantes - penalizacion;
+
+          for (const horario of horarios) {
+            combinacionesValidas.push({
+              grupo,
+              aula,
+              horario,
+              piso,
+              utilidad,
+              utilizacion,
+              penalizacion
+            });
           }
         }
       }
+
+      // Ordenar combinaciones por utilidad descendente
+      combinacionesValidas.sort((a, b) => b.utilidad - a.utilidad);
+
+      // Procesar asignaciones en chunks para no bloquear la UI
+      const chunkSize = Math.min(100, combinacionesValidas.length);
+      for (let i = 0; i < combinacionesValidas.length; i += chunkSize) {
+        const chunk = combinacionesValidas.slice(i, i + chunkSize);
+        
+        for (const combinacion of chunk) {
+          const aulaHorarioKey = `${combinacion.aula.id}_${combinacion.horario.id}`;
+          
+          if (!gruposAsignados[combinacion.grupo.id] && !aulasOcupadas[aulaHorarioKey]) {
+            asignaciones.push({
+              grupo: combinacion.grupo,
+              aula: combinacion.aula,
+              horario: combinacion.horario,
+              utilizacion: combinacion.utilizacion,
+              penalizacion: combinacion.penalizacion,
+              grupoNombre: combinacion.grupo.nombre,
+              aulaNombre: combinacion.aula.nombre,
+              pisoNombre: combinacion.piso.nombre,
+              horarioNombre: combinacion.horario.nombre,
+              capacidadAula: combinacion.aula.capacidad,
+              porcentajeOcupacion: combinacion.utilizacion
+            });
+
+            gruposAsignados[combinacion.grupo.id] = true;
+            aulasOcupadas[aulaHorarioKey] = true;
+          }
+        }
+
+        // Pequeño break entre chunks para permitir que otras tareas se ejecuten
+        if (i + chunkSize < combinacionesValidas.length) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+      }
+
+      // Calcular métricas
+      const estudiantesAsignados = asignaciones.reduce((sum, asig) => sum + asig.grupo.estudiantes, 0);
+      const penalizacionTotal = asignaciones.reduce((sum, asig) => sum + asig.penalizacion, 0);
+      const utilizacionPromedio = asignaciones.length > 0 
+        ? asignaciones.reduce((sum, asig) => sum + asig.utilizacion, 0) / asignaciones.length 
+        : 0;
+      const valorObjetivo = estudiantesAsignados - penalizacionTotal;
+
+      const resultado: ResultadoOptimizacion = {
+        valorObjetivo,
+        estudiantesAsignados,
+        penalizacionTotal,
+        utilizacionPromedio,
+        asignaciones
+      };
+
+      setResultado(resultado);
+
+      // Mostrar mensaje si no todos los grupos fueron asignados
+      const gruposNoAsignados = grupos.length - asignaciones.length;
+      if (gruposNoAsignados > 0) {
+        alert(`Optimización completada. ${gruposNoAsignados} grupo(s) no pudieron ser asignados debido a restricciones de capacidad o disponibilidad.`);
+      }
+
     } catch (error) {
-      console.error('Error en la optimización:', error);
-      alert('Ocurrió un error durante la optimización. Revisa la consola para más detalles.');
+      console.error('Error durante la optimización:', error);
+      alert('Error durante la optimización: ' + (error as Error).message);
+    } finally {
+      setOptimizando(false);
     }
-
-    const utilizacionPromedio = assignedCount > 0 ? totalUtilization / assignedCount : 0;
-
-    setResultado({
-      asignaciones: solvedAssignments,
-      valorObjetivo: totalObjectiveValue,
-      estudiantesAsignados: totalStudentsAssigned,
-      penalizacionTotal: totalPenalization,
-      utilizacionPromedio: utilizacionPromedio
-    });
-
-    setOptimizando(false);
   };
 
   return (
     <div className="container">
-      <header>
-        <h1><Calculator /> Optimizador de Asignación de Aulas</h1>
-        <p>Una herramienta para la planificación y optimización de recursos académicos.</p>
-      </header>
-
-      <div className="main-content">
-        <div className="config-panels">
-          <AulasPanel 
-            pisos={pisos}
-            aulas={aulas}
-            getAulasByPiso={getAulasByPiso}
-            onAddPiso={() => handleOpenDialog('piso')}
-            onEditPiso={(p: Piso) => handleOpenDialog('piso', p)}
-            onDeletePiso={handleDeletePiso}
-            onAddAula={() => handleOpenDialog('aula')}
-            onEditAula={(a: Aula) => handleOpenDialog('aula', a)}
-            onDeleteAula={handleDeleteAula}
-          />
-          <div className="modern-grid modern-grid-cols-2">
-            <GruposPanel 
-              grupos={grupos}
-              onAddGrupo={() => handleOpenDialog('grupo')}
-              onEditGrupo={(g: Grupo) => handleOpenDialog('grupo', g)}
-              onDeleteGrupo={handleDeleteGrupo}
-            />
-            <HorariosPanel 
-              horarios={horarios}
-              onAddHorario={() => handleOpenDialog('horario')}
-              onEditHorario={(h: Horario) => handleOpenDialog('horario', h)}
-              onDeleteHorario={handleDeleteHorario}
-            />
+      <div className="parameters-card">
+        <div className="card-header">
+          <Settings size={24} />
+          <h2>Parámetros de Optimización</h2>
+        </div>
+        <div className="card-body">
+          <div className="param-group">
+            <label htmlFor="umbralDelta">Umbral de Subutilización</label>
+            <div className="param-input-wrapper">
+              <input
+                id="umbralDelta"
+                type="number"
+                className="param-input"
+                min="0"
+                max="100"
+                step="1"
+                value={umbralDelta}
+                onChange={(e) => setUmbralDelta(Number(e.target.value))}
+              />
+              <span className="param-suffix">%</span>
+            </div>
+            <small className="text-muted">Considera un aula subutilizada cuando su ocupación está por debajo de este porcentaje.</small>
+          </div>
+          
+          <div className="param-group">
+            <label htmlFor="factorPenalizacion">Factor de Penalización</label>
+            <div className="param-input-wrapper">
+              <input
+                id="factorPenalizacion"
+                type="number"
+                className="param-input"
+                min="0"
+                step="0.1"
+                value={factorPenalizacion}
+                onChange={(e) => setFactorPenalizacion(Number(e.target.value))}
+              />
+            </div>
+            <small className="text-muted">Peso que se le da a la penalización por subutilización en el cálculo.</small>
+          </div>
+          
+          <div className="param-actions">
+            <button 
+              onClick={handleLoadDataset} 
+              className="modern-button modern-button-secondary-alt"
+              disabled={optimizando}
+            >
+              <PlusSquare size={18} />
+              Cargar Dataset
+            </button>
+            <button 
+              onClick={optimizarAsignaciones} 
+              className="modern-button modern-button-primary" 
+              disabled={optimizando || aulas.length === 0 || grupos.length === 0 || horarios.length === 0}
+            >
+              {optimizando ? (
+                <>
+                  <span className="spinner small"></span>
+                  Optimizando...
+                </>
+              ) : (
+                <>
+                  <Play size={18} />
+                  Ejecutar Optimización
+                </>
+              )}
+            </button>
+            <button 
+              onClick={() => setShowResetConfirm(true)}
+              className="modern-button modern-button-danger"
+              disabled={optimizando}
+            >
+              <Trash2 size={18} />
+              Reiniciar Datos
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="optimization-section">
-        <div className="settings-card">
-          <div className="card-header">
-            <Settings size={24} />
-            <h2>Parámetros de Optimización</h2>
-          </div>
-          <div className="card-body">
-            <div className="param-grid">
-              <div className="param-group">
-                <label htmlFor="umbralDelta">Umbral de Subutilización</label>
-                <div className="param-input-wrapper">
-                  <input
-                    id="umbralDelta"
-                    type="number"
-                    className="param-input"
-                    min="0"
-                    max="100"
-                    value={umbralDelta}
-                    onChange={(e) => setUmbralDelta(Number(e.target.value))}
-                  />
-                  <span className="param-suffix">%</span>
-                </div>
-                <small className="text-muted">Considera un aula subutilizada cuando su ocupación está por debajo de este porcentaje.</small>
-              </div>
-              
-              <div className="param-group">
-                <label htmlFor="factorPenalizacion">Factor de Penalización</label>
-                <div className="param-input-wrapper">
-                  <input
-                    id="factorPenalizacion"
-                    type="number"
-                    className="param-input"
-                    min="0"
-                    step="0.1"
-                    value={factorPenalizacion}
-                    onChange={(e) => setFactorPenalizacion(Number(e.target.value))}
-                  />
-                </div>
-                <small className="text-muted">Peso que se le da a la penalización por subutilización en el cálculo.</small>
-              </div>
-            </div>
-            
-            <div className="param-actions">
-              <button 
-                onClick={handleLoadDataset} 
-                className="modern-button modern-button-secondary-alt"
-              >
-                <PlusSquare size={18} />
-                Cargar Dataset
-              </button>
-              <button 
-                onClick={optimizarAsignaciones} 
-                className="modern-button modern-button-primary" 
-                disabled={optimizando || aulas.length === 0 || grupos.length === 0 || horarios.length === 0}
-              >
-                {optimizando ? (
-                  <>
-                    <span className="spinner small"></span>
-                    Optimizando...
-                  </>
-                ) : (
-                  <>
-                    <Play size={18} />
-                    Ejecutar Optimización
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Diálogo de confirmación para reiniciar datos */}
+      <ConfirmDialog
+        isOpen={showResetConfirm}
+        title="Reiniciar todos los datos"
+        message="¿Estás seguro de que deseas reiniciar todos los datos? Esta acción eliminará todas las aulas, grupos, horarios y resultados de optimización. Esta acción no se puede deshacer."
+        onConfirm={reiniciarDatos}
+        onCancel={() => setShowResetConfirm(false)}
+      />
 
       {optimizando && <div className="spinner"></div>}
 
@@ -581,7 +581,9 @@ const ClassroomOptimizationSystem: React.FC = () => {
               </div>
             </div>
             
+            {/* Tabla de Asignaciones */}
             <div className="assignments-grid">
+              <h3>Asignaciones Detalladas</h3>
               <table className="assignments-table">
                 <thead>
                   <tr>
@@ -593,14 +595,14 @@ const ClassroomOptimizationSystem: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {resultado.asignaciones.map(({ grupo, aula, horario, utilizacion, penalizacion }, index) => (
+                  {resultado.asignaciones?.map((asignacion, index) => (
                     <tr key={index}>
                       <td>
                         <div className="assignment-detail">
                           <Users size={18} />
                           <div>
-                            <strong>{grupo.nombre}</strong>
-                            <small>{grupo.estudiantes} estudiantes</small>
+                            <strong>{asignacion.grupoNombre}</strong>
+                            <small>{asignacion.grupo.estudiantes} estudiantes</small>
                           </div>
                         </div>
                       </td>
@@ -608,8 +610,8 @@ const ClassroomOptimizationSystem: React.FC = () => {
                         <div className="assignment-detail">
                           <Building size={18} />
                           <div>
-                            <strong>{aula.nombre}</strong>
-                            <small>Capacidad: {aula.capacidad}</small>
+                            <strong>{asignacion.aulaNombre}</strong>
+                            <small>Capacidad: {asignacion.capacidadAula}</small>
                           </div>
                         </div>
                       </td>
@@ -617,29 +619,29 @@ const ClassroomOptimizationSystem: React.FC = () => {
                         <div className="assignment-detail">
                           <Clock size={18} />
                           <div>
-                            <strong>{horario.nombre}</strong>
-                            <small>{horario.inicio} - {horario.fin}</small>
+                            <strong>{asignacion.horarioNombre}</strong>
+                            <small>{asignacion.horario.inicio} - {asignacion.horario.fin}</small>
                           </div>
                         </div>
                       </td>
                       <td className="utilization-cell">
                         <div className="utilization-value">
-                          <span>{utilizacion.toFixed(1)}%</span>
-                          <small>de {aula.capacidad} ({grupo.estudiantes})</small>
+                          <span>{asignacion.porcentajeOcupacion.toFixed(1)}%</span>
+                          <small>de {asignacion.capacidadAula} ({asignacion.grupo.estudiantes})</small>
                         </div>
                         <div className="utilization-bar">
                           <div 
                             className={`utilization-fill ${
-                              utilizacion >= 70 ? 'utilization-high' : 
-                              utilizacion >= 40 ? 'utilization-medium' : 'utilization-low'
+                              asignacion.porcentajeOcupacion >= 70 ? 'utilization-high' : 
+                              asignacion.porcentajeOcupacion >= 40 ? 'utilization-medium' : 'utilization-low'
                             }`} 
-                            style={{ width: `${Math.min(100, utilizacion)}%` }}
+                            style={{ width: `${Math.min(100, asignacion.porcentajeOcupacion)}%` }}
                           />
                         </div>
                       </td>
                       <td className="penalty-cell">
-                        {penalizacion > 0 ? (
-                          <span style={{ color: '#ef4444' }}>{penalizacion.toFixed(2)}</span>
+                        {asignacion.penalizacion > 0 ? (
+                          <span style={{ color: '#ef4444' }}>{asignacion.penalizacion.toFixed(2)}</span>
                         ) : (
                           <span style={{ color: '#10b981' }}>✓</span>
                         )}
@@ -653,60 +655,226 @@ const ClassroomOptimizationSystem: React.FC = () => {
         </div>
       )}
 
-      {dialogOpen && (
-        <div className="dialog-overlay">
-          <div className="dialog">
-            <div className="dialog-header">
-              <h3>{getDialogTitle()}</h3>
-              <button onClick={handleCloseDialog} className="close-button"><X /></button>
+      <div className="grid-container">
+        <div className="grid-col">
+          <AulasPanel
+            pisos={pisos}
+            aulas={aulas}
+            onAddPiso={handleAddPiso}
+            onAddAula={handleAddAula}
+            onEditPiso={(piso) => handleOpenDialog('piso', piso)}
+            onEditAula={(aula) => handleOpenDialog('aula', aula)}
+            onDeletePiso={handleDeletePiso}
+            onDeleteAula={handleDeleteAula}
+            getAulasByPiso={getAulasByPiso}
+          />
+        </div>
+        <div className="grid-col">
+          <GruposPanel
+            grupos={grupos}
+            onAddGrupo={handleAddGrupo}
+            onEditGrupo={(grupo) => handleOpenDialog('grupo', grupo)}
+            onDeleteGrupo={handleDeleteGrupo}
+          />
+        </div>
+        <div className="grid-col">
+          <HorariosPanel
+            horarios={horarios}
+            onAddHorario={handleAddHorario}
+            onEditHorario={(horario) => handleOpenDialog('horario', horario)}
+            onDeleteHorario={handleDeleteHorario}
+          />
+        </div>
+      </div>
+
+      {/* Diálogos */}
+      {dialogOpen === 'piso' && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>{getDialogTitle('piso', newPiso.id !== null)}</h3>
+            <div className="form-group">
+              <label>Número de Piso</label>
+              <input
+                type="number"
+                value={newPiso.numero}
+                onChange={(e) => setNewPiso({...newPiso, numero: parseInt(e.target.value) || 1})}
+              />
             </div>
-            <div className="dialog-body">
-              {dialogOpen === 'piso' && (
-                <>
-                  <div className="form-group"><label>Número</label><input type="number" value={newPiso.numero} onChange={e => setNewPiso({...newPiso, numero: parseInt(e.target.value)})} /></div>
-                  <div className="form-group"><label>Nombre</label><input type="text" value={newPiso.nombre} onChange={e => setNewPiso({...newPiso, nombre: e.target.value})} /></div>
-                </>
-              )}
-              {dialogOpen === 'aula' && (
-                <>
-                  <div className="form-group"><label>Nombre</label><input type="text" value={newAula.nombre} onChange={e => setNewAula({...newAula, nombre: e.target.value})} /></div>
-                  <div className="form-group">
-                    <label>Piso</label>
-                    <select value={newAula.pisoId} onChange={e => setNewAula({...newAula, pisoId: parseInt(e.target.value)})}>
-                      {pisos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group"><label>Capacidad</label><input type="number" value={newAula.capacidad} onChange={e => setNewAula({...newAula, capacidad: parseInt(e.target.value)})} /></div>
-                </>
-              )}
-              {dialogOpen === 'grupo' && (
-                <>
-                  <div className="form-group"><label>Nombre</label><input type="text" value={newGrupo.nombre} onChange={e => setNewGrupo({...newGrupo, nombre: e.target.value})} /></div>
-                  <div className="form-group"><label>Materia</label><input type="text" value={newGrupo.materia} onChange={e => setNewGrupo({...newGrupo, materia: e.target.value})} /></div>
-                  <div className="form-group"><label>Estudiantes</label><input type="number" value={newGrupo.estudiantes} onChange={e => setNewGrupo({...newGrupo, estudiantes: parseInt(e.target.value)})} /></div>
-                </>
-              )}
-              {dialogOpen === 'horario' && (
-                <>
-                  <div className="form-group"><label>Nombre</label><input type="text" value={newHorario.nombre} onChange={e => setNewHorario({...newHorario, nombre: e.target.value})} /></div>
-                  <div className="form-group"><label>Hora Inicio</label><input type="time" value={newHorario.inicio} onChange={e => setNewHorario({...newHorario, inicio: e.target.value})} /></div>
-                  <div className="form-group"><label>Hora Fin</label><input type="time" value={newHorario.fin} onChange={e => setNewHorario({...newHorario, fin: e.target.value})} /></div>
-                </>
-              )}
+            <div className="form-group">
+              <label>Nombre</label>
+              <input
+                type="text"
+                value={newPiso.nombre}
+                onChange={(e) => setNewPiso({...newPiso, nombre: e.target.value})}
+              />
             </div>
-            <div className="dialog-footer">
-              <button onClick={handleCloseDialog} className="button secondary-button">Cancelar</button>
-              <button onClick={handleDialogSubmit} className="button primary-button">{isEditing ? 'Actualizar' : 'Agregar'}</button>
+            <div className="modal-actions">
+              <button onClick={handleCloseDialog} className="modern-button secondary">
+                Cancelar
+              </button>
+              <button 
+                onClick={() => handleDialogSubmit('piso')} 
+                className="modern-button primary"
+              >
+                {newPiso.id ? 'Actualizar' : 'Agregar'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      <ConfirmDialog 
+      {dialogOpen === 'aula' && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>{getDialogTitle('aula', newAula.id !== null)}</h3>
+            <div className="form-group">
+              <label>Nombre</label>
+              <input
+                type="text"
+                value={newAula.nombre}
+                onChange={(e) => setNewAula({...newAula, nombre: e.target.value})}
+              />
+            </div>
+            <div className="form-group">
+              <label>Piso</label>
+              <select
+                value={newAula.pisoId}
+                onChange={(e) => setNewAula({...newAula, pisoId: parseInt(e.target.value)})}
+              >
+                {pisos.map((piso) => (
+                  <option key={piso.id} value={piso.id}>
+                    {piso.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Capacidad</label>
+              <input
+                type="number"
+                value={newAula.capacidad}
+                onChange={(e) => setNewAula({...newAula, capacidad: parseInt(e.target.value) || 0})}
+              />
+            </div>
+            <div className="modal-actions">
+              <button onClick={handleCloseDialog} className="modern-button secondary">
+                Cancelar
+              </button>
+              <button 
+                onClick={() => handleDialogSubmit('aula')} 
+                className="modern-button primary"
+              >
+                {newAula.id ? 'Actualizar' : 'Agregar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dialogOpen === 'grupo' && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>{getDialogTitle('grupo', newGrupo.id !== null)}</h3>
+            <div className="form-group">
+              <label>Nombre</label>
+              <input
+                type="text"
+                value={newGrupo.nombre}
+                onChange={(e) => setNewGrupo({...newGrupo, nombre: e.target.value})}
+              />
+            </div>
+            <div className="form-group">
+              <label>Materia</label>
+              <input
+                type="text"
+                value={newGrupo.materia}
+                onChange={(e) => setNewGrupo({...newGrupo, materia: e.target.value})}
+              />
+            </div>
+            <div className="form-group">
+              <label>Número de Estudiantes</label>
+              <input
+                type="number"
+                value={newGrupo.estudiantes}
+                onChange={(e) => setNewGrupo({...newGrupo, estudiantes: parseInt(e.target.value) || 0})}
+              />
+            </div>
+            <div className="modal-actions">
+              <button onClick={handleCloseDialog} className="modern-button secondary">
+                Cancelar
+              </button>
+              <button 
+                onClick={() => handleDialogSubmit('grupo')} 
+                className="modern-button primary"
+              >
+                {newGrupo.id ? 'Actualizar' : 'Agregar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dialogOpen === 'horario' && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>{getDialogTitle('horario', newHorario.id !== null)}</h3>
+            <div className="form-group">
+              <label>Nombre</label>
+              <input
+                type="text"
+                value={newHorario.nombre}
+                onChange={(e) => setNewHorario({...newHorario, nombre: e.target.value})}
+              />
+            </div>
+            <div className="form-group">
+              <label>Hora de Inicio</label>
+              <input
+                type="time"
+                value={newHorario.inicio}
+                onChange={(e) => setNewHorario({...newHorario, inicio: e.target.value})}
+              />
+            </div>
+            <div className="form-group">
+              <label>Hora de Fin</label>
+              <input
+                type="time"
+                value={newHorario.fin}
+                onChange={(e) => setNewHorario({...newHorario, fin: e.target.value})}
+              />
+            </div>
+            <div className="modal-actions">
+              <button onClick={handleCloseDialog} className="modern-button secondary">
+                Cancelar
+              </button>
+              <button 
+                onClick={() => handleDialogSubmit('horario')} 
+                className="modern-button primary"
+              >
+                {newHorario.id ? 'Actualizar' : 'Agregar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Diálogo de confirmación de reinicio */}
+      <ConfirmDialog
+        isOpen={showResetConfirm}
+        title="Confirmar Reinicio de Datos"
+        message="¿Estás seguro de que deseas reiniciar todos los datos? Esta acción eliminará toda la información de pisos, aulas, grupos y horarios, y no se puede deshacer."
+        onConfirm={reiniciarDatos}
+        onCancel={() => setShowResetConfirm(false)}
+      />
+
+      {/* Diálogo de confirmación */}
+      <ConfirmDialog
         isOpen={confirmState.isOpen}
         title={confirmState.title}
         message={confirmState.message}
-        onConfirm={confirmState.onConfirm!}
+        onConfirm={() => {
+          if (confirmState.onConfirm) confirmState.onConfirm();
+          setConfirmState({ isOpen: false, title: '', message: '', onConfirm: null });
+        }}
         onCancel={() => setConfirmState({ isOpen: false, title: '', message: '', onConfirm: null })}
       />
     </div>
