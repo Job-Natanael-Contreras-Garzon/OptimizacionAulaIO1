@@ -1,66 +1,149 @@
-# OptimizacionAulaIO1
+# Optimizador de Asignación de Aulas
 
-Este proyecto implementa un sistema de optimización para la asignación de aulas y horarios universitarios utilizando un modelo de Programación Lineal Entera Mixta (MILP) resuelto con `glpk.js`. A continuación, se detalla el algoritmo y su implementación.
+![Optimización de Aulas](https://via.placeholder.com/1200x400?text=Optimización+de+Asignación+de+Aulas)
 
-## Algoritmo de Optimización MILP
+Un sistema avanzado para la asignación óptima de aulas y horarios académicos mediante Programación Lineal Entera Mixta (MILP). Esta solución garantiza la asignación más eficiente de recursos educativos, maximizando la utilización de espacios y minimizando conflictos.
 
-El corazón de este sistema es un modelo de optimización matemática que busca la asignación óptima de grupos a aulas y bloques horarios, minimizando el subaprovechamiento de recursos y respetando diversas restricciones. A diferencia de los algoritmos heurísticos, un solver MILP garantiza encontrar la solución óptima si existe.
+## 📊 Diagrama de Flujo del Algoritmo
 
-### 1. Recepción y Preparación de Datos
+```mermaid
+graph TD
+    A[Inicio] --> B[Ingresar Datos]
+    B --> C[Configurar Parámetros]
+    C --> D[Construir Modelo MILP]
+    D --> E[Resolver con GLPK.js]
+    E --> F{¿Solución?}
+    F -->|Óptima/Posible| G[Mostrar Resultados]
+    F -->|Inviable| H[Mostrar Error]
+    G --> I[Exportar/Guardar]
+    H --> B
+```
 
-El sistema recibe los siguientes datos de entrada a través de la interfaz de usuario:
+## 🎯 Objetivo del Sistema
 
-*   **Aulas Disponibles**: Cada aula tiene una capacidad máxima de estudiantes. 
-*   **Grupos y Materias**: Cada grupo tiene un número de estudiantes y una materia asociada.
-*   **Bloques Horarios**: Definidos por una hora de inicio y fin.
-*   **Parámetros de Optimización**: Incluyen un factor de penalización por subutilización y un umbral de tolerancia para el espacio vacío en las aulas.
+Maximizar la asignación de estudiantes a aulas disponibles, considerando:
+- Capacidad de las aulas
+- Disponibilidad de horarios
+- Preferencias de asignación
+- Minimización de espacios vacíos
 
-Estos datos se transforman en el formato requerido por el solver `glpk.js`.
+## 🔢 Modelo Matemático
 
-### 2. Modelo de Programación Lineal Entera Mixta (MILP)
+### Variables de Decisión
 
-El problema se formula como un modelo MILP con los siguientes componentes:
+| Variable | Tipo | Descripción |
+|----------|------|-------------|
+| `x_ijt` | Binaria | 1 si el grupo i se asigna al aula j en el horario t |
+| `U_ijt` | Continua | Espacio vacío en el aula j para el grupo i en el horario t |
 
-#### Variables de Decisión:
+### Función Objetivo
 
-*   `x_ijt`: Variable binaria (0 o 1). Es 1 si el grupo `i` se asigna al aula `j` en el bloque horario `t`, y 0 en caso contrario.
-*   `U_ijt`: Variable continua que representa la subutilización (espacio vacío) en el aula `j` si el grupo `i` se asigna en el bloque `t`.
+```
+Maximizar: Σ (estudiantes_i * x_ijt) - Σ (penalización * U_ijt)
+```
 
-#### Función Objetivo:
+### Restricciones
 
-El objetivo es maximizar el número total de estudiantes asignados, mientras se penaliza el espacio vacío excesivo en las aulas. La función objetivo se define como:
+1. **Asignación Única por Grupo**
+   ```
+   Σ_j Σ_t (x_ijt) ≤ 1  ∀i ∈ Grupos
+   ```
+   *Cada grupo se asigna como máximo a un aula y horario.*
 
-`Maximizar: Σ (estudiantes_i * x_ijt) - Σ (penalización_factor * U_ijt)`
+2. **Una Asignación por Aula-Horario**
+   ```
+   Σ_i (x_ijt) ≤ 1  ∀j ∈ Aulas, ∀t ∈ Horarios
+   ```
+   *Cada combinación de aula-horario puede asignarse a un solo grupo.*
 
-Donde `estudiantes_i` es el número de estudiantes del grupo `i`, y `penalización_factor` es un coeficiente que ajusta la importancia de minimizar el espacio vacío.
+3. **Límite de Capacidad**
+   ```
+   estudiantes_i * x_ijt ≤ capacidad_j  ∀i,j,t
+   ```
+   *La cantidad de estudiantes no puede exceder la capacidad del aula.*
 
-#### Restricciones:
+4. **Cálculo de Subutilización**
+   ```
+   U_ijt ≥ (capacidad_j - estudiantes_i - umbral) * x_ijt
+   U_ijt ≥ 0
+   ```
+   *Calcula el espacio vacío penalizado cuando se asigna un grupo a un aula.*
 
-1.  **Asignación Única por Grupo**: Cada grupo debe ser asignado a un máximo de un aula en un bloque horario.
-    `Σ_j Σ_t (x_ijt) <= 1` para cada grupo `i`
+## 🛠️ Implementación Técnica
 
-2.  **Una Asignación por Aula-Horario**: Cada aula en un bloque horario solo puede ser asignada a un grupo.
-    `Σ_i (x_ijt) <= 1` para cada aula `j` y bloque horario `t`
+### Estructura del Proyecto
 
-3.  **Restricción de Capacidad**: El número de estudiantes de un grupo no puede exceder la capacidad del aula asignada.
-    `estudiantes_i * x_ijt <= capacidad_j` para cada grupo `i`, aula `j`, bloque horario `t`
+```
+src/
+├── components/     # Componentes React reutilizables
+├── hooks/          # Custom Hooks para lógica compartida
+├── types/          # Definiciones de TypeScript
+├── utils/          # Funciones de utilidad
+└── App.tsx         # Componente principal
+```
 
-4.  **Cálculo de Subutilización (Penalización)**: Define la variable `U_ijt` como el espacio vacío en el aula `j` si el grupo `i` se asigna en el bloque `t`, considerando un umbral de tolerancia.
-    `U_ijt >= (capacidad_j - estudiantes_i) - umbral_tolerancia_j` si `x_ijt = 1`
-    `U_ijt >= 0`
+### Flujo de Datos
 
-### 3. Integración y Resolución con `glpk.js`
+1. **Entrada de Datos**
+   - Aulas con capacidades
+   - Grupos con número de estudiantes
+   - Bloques horarios
+   - Parámetros de optimización
 
-1.  **Inicialización**: Se inicializa el solver `glpk.js` de forma asíncrona.
-2.  **Construcción del Modelo**: Los datos de entrada se utilizan para construir el objeto del problema MILP en el formato JSON que `glpk.js` espera, definiendo variables, función objetivo y restricciones.
-3.  **Resolución**: Se invoca el método `solve` de `glpk.js` para encontrar la solución óptima. Esta operación es asíncrona y se espera su resultado.
+2. **Procesamiento**
+   - Validación de datos
+   - Construcción del modelo MILP
+   - Resolución con GLPK.js
+   - Análisis de resultados
 
-### 4. Procesamiento y Visualización de Resultados
+3. **Salida**
+   - Asignaciones óptimas
+   - Métricas de desempeño
+   - Visualización interactiva
 
-Una vez que `glpk.js` ha resuelto el modelo, el sistema procesa el resultado:
+## 📈 Métricas de Desempeño
 
-*   **Estado de la Solución**: Se verifica si el solver encontró una solución óptima (`GLP_OPT`) o factible (`GLP_FEAS`).
-*   **Extracción de Asignaciones**: Se identifican las variables `x_ijt` que tienen un valor de 1 (o muy cercano a 1) para determinar qué grupos fueron asignados a qué aulas y horarios.
-*   **Cálculo de Métricas**: Se calculan métricas como el valor total de la función objetivo, el total de estudiantes asignados, la penalización total y la utilización promedio de las aulas.
-*   **Actualización de la UI**: Los resultados se muestran en la interfaz de usuario en la sección "Resultados de la Optimización" y en la "Matriz de Asignaciones", proporcionando una visión clara de cómo se realizaron las asignaciones.
+- **Tasa de Asignación**: Porcentaje de grupos asignados exitosamente
+- **Utilización Promedio**: Uso promedio de la capacidad de las aulas
+- **Penalización Total**: Espacio vacío penalizado
+- **Tiempo de Cálculo**: Tiempo de ejecución del algoritmo
 
+## 🚀 Características
+
+- Interfaz intuitiva y responsiva
+- Visualización clara de asignaciones
+- Ajuste en tiempo real de parámetros
+- Exportación de resultados
+- Persistencia de datos
+
+## 📚 Documentación Técnica
+
+### Instalación
+
+```bash
+# Clonar el repositorio
+git clone https://github.com/tu-usuario/optimizacion-aulas.git
+
+# Instalar dependencias
+cd optimizacion-aulas
+npm install
+
+# Iniciar la aplicación
+npm start
+```
+
+### Dependencias Principales
+
+- React 18
+- TypeScript
+- GLPK.js
+- Lucide Icons
+- Vite
+
+## 📝 Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+
+---
+
+Desarrollado con ❤️ para la optimización de recursos educativos
